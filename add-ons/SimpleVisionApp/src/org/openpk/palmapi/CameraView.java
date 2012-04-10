@@ -39,6 +39,9 @@ public class CameraView implements SurfaceHolder.Callback{
     }
 
     public void DoPreview(PreviewCallback cb) {
+        if ( camera_ == null)
+            return;
+
         camera_.stopPreview();
         camera_.setPreviewCallback(cb);
         camera_.startPreview();
