@@ -15,19 +15,22 @@ import android.util.Log;
 import android.view.View;
 
 public class VisionOverlay extends View{
+    private int x = 0;
+
     public VisionOverlay(Context c, AttributeSet attr) {
         super(c, attr);        
     }
 
-    public void DrawResult() {
-
+    public void DrawResult(int r) {
+        x = r;
+        postInvalidate();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         Paint p = new Paint();
         p.setTextSize (50);
-        canvas.drawText("Hello", 100, 100, p);
+        canvas.drawText("Hello", 100, x+50, p);
     }
 
 }

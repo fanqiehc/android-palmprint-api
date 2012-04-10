@@ -1,4 +1,4 @@
 all:
-	/home/teaonly/opt/android-ndk-r7/ndk-build
+	/home/frank/opt/android-ndk-r7b/ndk-build
 
     
