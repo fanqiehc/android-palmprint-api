@@ -21,11 +21,13 @@ public class OverlayView extends View{
         super(c, attr);        
     }
 
-    public void DrawResult() {
+    public void DrawResult(byte[] frame, int wid, int hei) {
+    	
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
+    	
     }
 
 }
