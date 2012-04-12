@@ -28,7 +28,6 @@ public class CameraView implements SurfaceHolder.Callback{
     private int targetHeight = 0;
 
     public CameraView(SurfaceView sv, int width, int height){
-        mainActivity_ = m;
         surfaceView_ = sv;
         targetWidth = width;
         targetHeight = height;

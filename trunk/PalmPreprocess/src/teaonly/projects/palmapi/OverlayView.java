@@ -21,7 +21,7 @@ public class OverlayView extends View{
         super(c, attr);        
     }
 
-    public void DrawResult(void) {
+    public void DrawResult() {
     }
 
     @Override
