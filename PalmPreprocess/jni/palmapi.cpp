@@ -20,7 +20,6 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
 	
     jbyte* framePtr = env->GetByteArrayElements(src,&b);
 
-    //ret = LabelSkinArea((unsigned char *)framePtr, wid, hei);
     LabelCentralArea((unsigned char *)framePtr, wid, hei);
     LabelPalmArea((unsigned char *)framePtr, wid, hei);
     

@@ -44,11 +44,6 @@ public class MainActivity extends Activity implements View.OnTouchListener, Came
     }
 
     @Override
-    public void onCameraReady() {
-        
-    }
-
-    @Override
     public void onDestroy(){
         super.onDestroy();
     }   
@@ -70,11 +65,12 @@ public class MainActivity extends Activity implements View.OnTouchListener, Came
 
     @Override
     public boolean onTouch(View v, MotionEvent evt) {
-        return super.onTouch(v, evnt);
+        return false;
     } 
 
     private PreviewCallback previewCb_ = new PreviewCallback() {
         public void onPreviewFrame(byte[] frame, Camera c) {
+            //NativeAPI.nativeLabelPalm( frame, cameraView_.PictureWidth(), cameraView_.PictureHeight() );
         }
     };
 
