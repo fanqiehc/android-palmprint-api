@@ -11,7 +11,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE    := palmapi
 LOCAL_CPPFLAGS := -Werror -Wall -O2
 LOCAL_C_INCLUDES :=  ./
-LOCAL_LDLIBS := -llog
+LOCAL_LDLIBS := -llog -ljnigraphics
 
 include $(LOCAL_PATH)/build.mk
 

@@ -6,7 +6,7 @@ import android.util.Log;
 
 class NativeAPI {
     public static native int nativePrepare(int width, int height);
-    public static native int nativeLabelPalm(byte[] frame, int width, int height);
+    public static native int nativeLabelPalm(byte[] frame, int width, int height, Object bmp);
 
     public static void LoadLibraries() {
         System.loadLibrary("palmapi");
