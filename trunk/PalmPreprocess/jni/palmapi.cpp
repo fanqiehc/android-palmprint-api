@@ -14,6 +14,7 @@ extern "C" {
 
 JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint preWid, jint preHei, jint picWid, jint picHei) {
     PrepareLabelPalm(preWid, preHei);
+    PrepareEnhence(picWid, picHei);
 }
 
 JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jint wid, jint hei, jobject bmp) {
