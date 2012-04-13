@@ -14,6 +14,9 @@ import android.app.Activity;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.hardware.Camera.PictureCallback;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
@@ -21,6 +24,7 @@ import android.view.MotionEvent;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.SurfaceView;
+import android.util.Log;
 
 public class MainActivity extends Activity implements View.OnTouchListener, CameraView.CameraReadyCallback {
     private CameraView cameraView_;
@@ -28,7 +32,8 @@ public class MainActivity extends Activity implements View.OnTouchListener, Came
 
     private boolean labelProcessing_ = false;
     private LabelThread labelThread_ = null;
-    private byte[] labelFrame = null; 
+    private byte[] labelFrame_ = null; 
+    private Bitmap labelResultBMP_;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -43,19 +48,22 @@ public class MainActivity extends Activity implements View.OnTouchListener, Came
         setContentView(R.layout.main);
 
         SurfaceView cameraSurface = (SurfaceView)findViewById(R.id.surface_camera);
-        cameraView_ = new CameraView(cameraSurface, 640, 480);        
+        cameraView_ = new CameraView(cameraSurface, 320, 240);        
         cameraView_.setCameraReadyCallback(this);
 
         overlayView_ = (OverlayView)findViewById(R.id.surface_overlay);
         overlayView_.setOnTouchListener(this);
+
     }
     
     @Override
     public void onCameraReady() {
         int wid = cameraView_.PictureWidth();
         int hei = cameraView_.PictureHeight();
-        labelFrame = new byte[wid * hei + wid * hei / 2];
+        labelFrame_ = new byte[wid * hei + wid * hei / 2];
         NativeAPI.nativePrepare( wid, hei ); 
+    
+        labelResultBMP_ = Bitmap.createBitmap(overlayView_.getWidth(), overlayView_.getHeight(), Bitmap.Config.ARGB_8888);        
         cameraView_.DoPreview( previewCb_ ); 
     }
 
@@ -108,7 +116,7 @@ public class MainActivity extends Activity implements View.OnTouchListener, Came
             int hei = cameraView_.PictureHeight();             
 
             ByteBuffer bbuffer = ByteBuffer.wrap(frame); 
-            bbuffer.get(labelFrame, 0, wid * hei + wid * hei / 2);
+            bbuffer.get(labelFrame_, 0, wid * hei + wid * hei / 2);
 
             waitCompleteLastLabeling();
             labelThread_ = new LabelThread();
@@ -122,10 +130,9 @@ public class MainActivity extends Activity implements View.OnTouchListener, Came
 
         @Override
         public void run() {           
-            NativeAPI.nativeLabelPalm( labelFrame, cameraView_.PictureWidth(), cameraView_.PictureHeight() );
-
-            overlayView_.DrawResult(labelFrame, cameraView_.PictureWidth(), cameraView_.PictureHeight() );
-
+            labelResultBMP_.eraseColor(Color.TRANSPARENT);
+            NativeAPI.nativeLabelPalm( labelFrame_, cameraView_.PictureWidth(), cameraView_.PictureHeight(), labelResultBMP_ );
+            overlayView_.DrawResult( labelResultBMP_ );
             labelProcessing_ = false;
         }
     }
