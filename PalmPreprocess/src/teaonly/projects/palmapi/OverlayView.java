@@ -15,6 +15,11 @@ import android.util.Log;
 import android.view.View;
 
 public class OverlayView extends View {
+    public static interface UpdateDoneCallback { 
+        public void onUpdateDone(); 
+    }  
+   
+    private UpdateDoneCallback updateDoneCb = null; 
     private Bitmap targetBMP = null;
     private Rect targetRect = null;
 
@@ -29,10 +34,16 @@ public class OverlayView extends View {
         postInvalidate(); 
     }
 
+    public void setUpdateDoneCallback(UpdateDoneCallback cb) {
+        updateDoneCb = cb;
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         if ( targetBMP != null ) {            
             canvas.drawBitmap(targetBMP, null, targetRect, null);
+            if ( updateDoneCb != null)
+                updateDoneCb.onUpdateDone();
         }
     }
 

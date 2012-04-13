@@ -26,7 +26,9 @@ import android.view.WindowManager;
 import android.view.SurfaceView;
 import android.util.Log;
 
-public class MainActivity extends Activity implements View.OnTouchListener, CameraView.CameraReadyCallback {
+public class MainActivity extends Activity 
+    implements View.OnTouchListener, CameraView.CameraReadyCallback, OverlayView.UpdateDoneCallback{
+    
     private CameraView cameraView_;
     private OverlayView overlayView_;
 
@@ -53,7 +55,7 @@ public class MainActivity extends Activity implements View.OnTouchListener, Came
 
         overlayView_ = (OverlayView)findViewById(R.id.surface_overlay);
         overlayView_.setOnTouchListener(this);
-
+        overlayView_.setUpdateDoneCallback(this);
     }
     
     @Override
@@ -65,6 +67,11 @@ public class MainActivity extends Activity implements View.OnTouchListener, Came
     
         labelResultBMP_ = Bitmap.createBitmap(overlayView_.getWidth(), overlayView_.getHeight(), Bitmap.Config.ARGB_8888);        
         cameraView_.DoPreview( previewCb_ ); 
+    }
+ 
+    @Override
+    public void onUpdateDone() {
+        labelProcessing_ = false;     
     }
 
     @Override
@@ -133,7 +140,6 @@ public class MainActivity extends Activity implements View.OnTouchListener, Came
             labelResultBMP_.eraseColor(Color.TRANSPARENT);
             NativeAPI.nativeLabelPalm( labelFrame_, cameraView_.PictureWidth(), cameraView_.PictureHeight(), labelResultBMP_ );
             overlayView_.DrawResult( labelResultBMP_ );
-            labelProcessing_ = false;
         }
     }
 }
