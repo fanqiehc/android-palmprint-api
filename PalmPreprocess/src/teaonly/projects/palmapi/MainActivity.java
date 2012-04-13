@@ -50,7 +50,7 @@ public class MainActivity extends Activity
         setContentView(R.layout.main);
 
         SurfaceView cameraSurface = (SurfaceView)findViewById(R.id.surface_camera);
-        cameraView_ = new CameraView(cameraSurface, 320, 240);        
+        cameraView_ = new CameraView(cameraSurface, 320, 240, 640, 480);        
         cameraView_.setCameraReadyCallback(this);
 
         overlayView_ = (OverlayView)findViewById(R.id.surface_overlay);
@@ -60,10 +60,10 @@ public class MainActivity extends Activity
     
     @Override
     public void onCameraReady() {
-        int wid = cameraView_.PictureWidth();
-        int hei = cameraView_.PictureHeight();
+        int wid = cameraView_.PreviewWidth();
+        int hei = cameraView_.PreviewHeight();
         labelFrame_ = new byte[wid * hei + wid * hei / 2];
-        NativeAPI.nativePrepare( wid, hei ); 
+        NativeAPI.nativePrepare( wid, hei, wid, hei); 
     
         labelResultBMP_ = Bitmap.createBitmap(overlayView_.getWidth(), overlayView_.getHeight(), Bitmap.Config.ARGB_8888);        
         cameraView_.DoPreview( previewCb_ ); 
@@ -119,8 +119,8 @@ public class MainActivity extends Activity
                 return;
 
             labelProcessing_ = true; 
-            int wid = cameraView_.PictureWidth();
-            int hei = cameraView_.PictureHeight();             
+            int wid = cameraView_.PreviewWidth();
+            int hei = cameraView_.PreviewHeight();             
 
             ByteBuffer bbuffer = ByteBuffer.wrap(frame); 
             bbuffer.get(labelFrame_, 0, wid * hei + wid * hei / 2);
@@ -132,13 +132,13 @@ public class MainActivity extends Activity
     };
 
     private class LabelThread extends Thread{
-        private int width = cameraView_.PictureWidth();
-        private int height = cameraView_.PictureHeight();
+        private int width = cameraView_.PreviewWidth();
+        private int height = cameraView_.PreviewHeight();
 
         @Override
         public void run() {           
             labelResultBMP_.eraseColor(Color.TRANSPARENT);
-            NativeAPI.nativeLabelPalm( labelFrame_, cameraView_.PictureWidth(), cameraView_.PictureHeight(), labelResultBMP_ );
+            NativeAPI.nativeLabelPalm( labelFrame_, cameraView_.PreviewWidth(), cameraView_.PreviewHeight(), labelResultBMP_ );
             overlayView_.DrawResult( labelResultBMP_ );
         }
     }

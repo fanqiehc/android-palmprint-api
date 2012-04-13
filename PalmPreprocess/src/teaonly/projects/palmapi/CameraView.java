@@ -20,29 +20,42 @@ public class CameraView implements SurfaceHolder.Callback{
     private SurfaceView	  surfaceView_;
     CameraReadyCallback cameraReadyCb_ = null;
    
-    private Camera.Size preSize_;
+    private Camera.Size preSize_, procSize_;
     private boolean tackingPicture_ = false;
     private boolean inProcessing_ = false;
 
-    private int targetWidth = 0;
-    private int targetHeight = 0;
+    private int previewWidth = 0;
+    private int previewHeight = 0;
 
-    public CameraView(SurfaceView sv, int width, int height){
+    private int processWidth = 0;
+    private int processHeight = 0;
+
+
+    public CameraView(SurfaceView sv, int width, int height, int picWid, int picHei){
         surfaceView_ = sv;
-        targetWidth = width;
-        targetHeight = height;
+        previewWidth = width;
+        previewHeight = height;
+        processWidth = picWid;
+        processHeight = picHei;
 
         surfaceHolder_ = surfaceView_.getHolder();
         surfaceHolder_.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
         surfaceHolder_.addCallback(this); 
     }
 
-    public int PictureWidth() {
+    public int PreviewWidth() {
         return preSize_.width;
     }
 
-    public int PictureHeight() {
+    public int PreviewHeight() {
         return preSize_.height;
+    }
+
+    public int PictureWidth() {
+        return procSize_.width;
+    }
+    public int PictureHeight() {
+        return procSize_.height;
     }
 
     public void setCameraReadyCallback(CameraReadyCallback cb) {
@@ -70,12 +83,20 @@ public class CameraView implements SurfaceHolder.Callback{
         
         for(Camera.Size s : p.getSupportedPreviewSizes()) {
             preSize_ = s;            
-            if ( s.width == targetWidth || s.height == targetHeight )  {              
+            if ( s.width == previewWidth || s.height == previewHeight )  {              
                 break;
             }
         }
         p.setPreviewSize(preSize_.width, preSize_.height);
-        p.setPictureSize(preSize_.width, preSize_.height);
+        
+        for(Camera.Size s : p.getSupportedPreviewSizes()) {
+            procSize_ = s;            
+            if ( s.width == processWidth || s.height == processHeight )  {              
+                break;
+            }
+        }
+        p.setPictureSize(procSize_.width, procSize_.height);
+
         camera_.setParameters(p);
         camera_.setDisplayOrientation(90);
         try {
