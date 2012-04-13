@@ -45,7 +45,7 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
                 for(int n = y-1; n < y+1; n++) {
                     if ( m > 0 && n > 0 && m < (int)info.width && n < (int)info.height) {
     		            unsigned int* rgba = pixels + m + n*info.stride/4;
-                        *rgba = 0xFFFFFFFF;
+                        *rgba = 0xFF00FFFF;
                     }
                 }
             }
