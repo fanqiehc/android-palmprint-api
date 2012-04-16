@@ -7,19 +7,29 @@
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)  
 #define  JNIDEFINE(fname) Java_teaonly_projects_palmapi_NativeAPI_##fname
 
+
+static int preWid, preHei, picWid, picHei;
+
 extern "C" {
     JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint preWid, jint preHei, jint picWid, jint picHei);
-    JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jint wid, jint hei, jobject bmp);
+    JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jobject bmp);
+    JNIEXPORT void JNICALL JNIDEFINE(nativeEnhencePalm)(JNIEnv* env, jclass clz, jbyteArray map, jbyteArray frame, jobject bmp);
 };
 
-JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint preWid, jint preHei, jint picWid, jint picHei) {
+JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint wid1, jint hei1, jint wid2, jint hei2) {
+    preWid = wid1;
+    preHei = hei1;
+    picWid = wid2;
+    picHei = hei2;
     PrepareLabelPalm(preWid, preHei);
     PrepareEnhence(picWid, picHei);
 }
 
-JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jint wid, jint hei, jobject bmp) {
+JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jobject bmp) {
     jboolean b;    
-	
+	int wid = preWid;
+    int hei = preHei;
+
     jbyte* framePtr = env->GetByteArrayElements(src,&b);
     LabelCentralArea((unsigned char *)framePtr, wid, hei);
     LabelPalmArea((unsigned char *)framePtr, wid, hei);
@@ -58,3 +68,6 @@ release:
 	env->ReleaseByteArrayElements(src, framePtr, 0);   
 }
 
+JNIEXPORT void JNICALL JNIDEFINE(nativeEnhencePalm)(JNIEnv* env, jclass clz, jbyteArray map, jbyteArray frame, jobject bmp) {
+
+}
