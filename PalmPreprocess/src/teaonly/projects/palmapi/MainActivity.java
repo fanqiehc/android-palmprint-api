@@ -28,14 +28,24 @@ import android.util.Log;
 
 public class MainActivity extends Activity 
     implements View.OnTouchListener, CameraView.CameraReadyCallback, OverlayView.UpdateDoneCallback{
-    
+    private enum AppState{
+        INITED, LABELING, PROCESSING, DISPLAY_SHOW,    
+    }
+
     private CameraView cameraView_;
     private OverlayView overlayView_;
+
+    private AppState state_ = AppState.INITED;
 
     private boolean labelProcessing_ = false;
     private LabelThread labelThread_ = null;
     private byte[] labelFrame_ = null; 
     private Bitmap labelResultBMP_;
+
+    private boolean procProcessing_ = false;
+    private ProcThread procThread_ = null;
+    private byte[] procFrame_ = null; 
+    private Bitmap procResultBMP_;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -60,13 +70,20 @@ public class MainActivity extends Activity
     
     @Override
     public void onCameraReady() {
-        int wid = cameraView_.PreviewWidth();
-        int hei = cameraView_.PreviewHeight();
-        labelFrame_ = new byte[wid * hei + wid * hei / 2];
-        NativeAPI.nativePrepare( wid, hei, wid, hei); 
-    
+        int wid1 = cameraView_.PreviewWidth();
+        int hei1 = cameraView_.PreviewHeight();
+        labelFrame_ = new byte[wid1 * hei1 + wid1 * hei1 / 2];
         labelResultBMP_ = Bitmap.createBitmap(overlayView_.getWidth(), overlayView_.getHeight(), Bitmap.Config.ARGB_8888);        
-        cameraView_.DoPreview( previewCb_ ); 
+
+        int wid2 = cameraView_.PictureWidth();
+        int hei2 = cameraView_.PictureHeight();
+        procFrame_ = new byte[wid2 * hei2 + wid2 * hei2 / 2];        
+        procResultBMP_ = Bitmap.createBitmap(overlayView_.getWidth(), overlayView_.getHeight(), Bitmap.Config.ARGB_8888);        
+
+        NativeAPI.nativePrepare( wid1, hei1, wid2, hei2);     
+
+        state_ = AppState.LABELING;
+        cameraView_.SetPreview( previewCb_ ); 
     }
  
     @Override
@@ -88,7 +105,7 @@ public class MainActivity extends Activity
     public void onResume(){
         super.onResume();
     }   
-
+    
     @Override
     public void onPause(){    
         super.onPause();
@@ -96,6 +113,14 @@ public class MainActivity extends Activity
 
     @Override
     public boolean onTouch(View v, MotionEvent evt) {
+        if ( state_ == AppState.LABELING ) {
+            cameraView_.SetPreview(null);
+            waitCompleteLastLabeling();
+            labelProcessing_ = false;
+            state_ = AppState.PROCESSING;
+            cameraView_.TakePicture(pictureCb_);
+        }
+
         return false;
     } 
 
@@ -115,6 +140,9 @@ public class MainActivity extends Activity
 
     private PreviewCallback previewCb_ = new PreviewCallback() {
         public void onPreviewFrame(byte[] frame, Camera c) {
+            if ( state_ != AppState.LABELING)
+                return;
+            
             if ( labelProcessing_ )
                 return;
 
@@ -131,6 +159,22 @@ public class MainActivity extends Activity
         }
     };
 
+    private PictureCallback pictureCb_ = new PictureCallback() {
+        @Override
+        public void onPictureTaken(byte[] frame, Camera c) {
+            
+            // copy to local memory
+            int wid = cameraView_.PictureWidth();
+            int hei = cameraView_.PictureHeight();             
+            ByteBuffer bbuffer = ByteBuffer.wrap(frame); 
+            bbuffer.get(procFrame_, 0, wid * hei + wid * hei / 2);
+
+            procThread_ = new ProcThread();
+            procThread_.start();
+        }         
+    };
+
+
     private class LabelThread extends Thread{
         private int width = cameraView_.PreviewWidth();
         private int height = cameraView_.PreviewHeight();
@@ -142,4 +186,14 @@ public class MainActivity extends Activity
             overlayView_.DrawResult( labelResultBMP_ );
         }
     }
+
+    private class ProcThread extends Thread {
+
+        @Override
+        public void run() {           
+            // processing memory in natvie     
+
+        }
+    }
+
 }
