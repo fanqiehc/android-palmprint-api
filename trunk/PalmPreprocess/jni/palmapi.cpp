@@ -8,36 +8,37 @@
 #define  JNIDEFINE(fname) Java_teaonly_projects_palmapi_NativeAPI_##fname
 
 
-static int preWid, preHei, picWid, picHei;
+static int picWid, picHei, labelScale;
 
 extern "C" {
-    JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint preWid, jint preHei, jint picWid, jint picHei);
-    JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jobject bmp);
+    JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint picWid, jint picHei, jint scale);
+    JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jbyteArray dst, jobject bmp);
     JNIEXPORT void JNICALL JNIDEFINE(nativeEnhencePalm)(JNIEnv* env, jclass clz, jbyteArray map, jbyteArray frame, jobject bmp);
 };
 
-JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint wid1, jint hei1, jint wid2, jint hei2) {
-    preWid = wid1;
-    preHei = hei1;
-    picWid = wid2;
-    picHei = hei2;
-    PrepareLabelPalm(preWid, preHei);
+JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint wid, jint hei, jint scale) {
+    picWid = wid;
+    picHei = hei;
+    labelScale = scale;
+    PrepareLabelPalm(picWid / scale, picHei / scale);
     PrepareEnhence(picWid, picHei);
 }
 
-JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jobject bmp) {
+JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jbyteArray dst, jobject bmp) {
     jboolean b;    
-	int wid = preWid;
-    int hei = preHei;
 
-    jbyte* framePtr = env->GetByteArrayElements(src,&b);
-    LabelCentralArea((unsigned char *)framePtr, wid, hei);
-    LabelPalmArea((unsigned char *)framePtr, wid, hei);
+    jbyte* framePtr = env->GetByteArrayElements(src, &b);
+    jbyte* destPtr = env->GetByteArrayElements(dst, &b);
+
+    LabelCentralArea((unsigned char *)framePtr, picWid, picHei, labelScale);
+    LabelPalmArea((unsigned char *)destPtr);
 
     // convert result to bitmap
 	AndroidBitmapInfo  info;
 	unsigned int *pixels;
-
+    int wid = picWid / labelScale;
+    int hei = picHei / labelScale;
+ 
 	if ((AndroidBitmap_getInfo(env, bmp, &info)) < 0) {  
     	goto release;
     } 
@@ -45,9 +46,9 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
         goto release;
     }
 
-    for(int i = 0; i < hei; i++) {
+   for(int i = 0; i < hei; i++) {
     	for ( int j = 0; j < wid; j++) {
-            if ( framePtr[j+i*wid] == 1){
+            if ( destPtr[j+i*wid] == 1){
                 
                 int y = (int)(1.0 * info.height / wid * j);
                 int x = (int)(1.0 * info.width / hei * (hei - i));
@@ -66,6 +67,8 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
     AndroidBitmap_unlockPixels(env, bmp);
 release:    
 	env->ReleaseByteArrayElements(src, framePtr, 0);   
+	env->ReleaseByteArrayElements(dst, destPtr, 0);   
+
 }
 
 JNIEXPORT void JNICALL JNIDEFINE(nativeEnhencePalm)(JNIEnv* env, jclass clz, jbyteArray map, jbyteArray frame, jobject bmp) {

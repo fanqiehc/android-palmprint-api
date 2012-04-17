@@ -14,7 +14,7 @@ void PrepareLabelPalm(int wid, int hei) {
     labelImage.resize(wid, hei);
 }
 
-int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei) {
+int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei, int scale) {
     // central area define. 
     int ltx = wid*2/5;
     int lty = hei/3;
@@ -30,8 +30,8 @@ int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei) {
     int cbSum = 0;
     int crSum = 0;
 
-    for ( int y = lty; y < rby; y++ ) {
-        for ( int x = ltx; x < rbx; x++) {
+    for ( int y = lty; y < rby; y+=scale ) {
+        for ( int x = ltx; x < rbx; x+=scale) {
             luma = &nv21_frame[x + y*wid];
             cr = &nv21_frame[ uv_begin + (y>>1)*wid + ((x>>1)<<1) ];
             cb = cr + 1;
@@ -41,7 +41,7 @@ int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei) {
         }
     }
 
-    int pointNum = (( rby - lty ) * ( rbx - ltx ) );
+    int pointNum = (( rby - lty ) * ( rbx - ltx ) ) / ( scale * scale);
     
     float lumaMean = lumaSum / pointNum;
     float crMean = crSum / pointNum;
@@ -51,8 +51,8 @@ int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei) {
     float crDeltaSum = 0.0;
     float cbDeltaSum = 0.0;
     
-    for ( int y = lty; y < rby; y++ ) {
-        for ( int x = ltx; x < rbx; x++) {
+    for ( int y = lty; y < rby; y+=scale ) {
+        for ( int x = ltx; x < rbx; x+=scale) {
             luma = &nv21_frame[x + y*wid];
             cr = &nv21_frame[ uv_begin + (y>>1)*wid + ((x>>1)<<1) ];
             cb = cr + 1;
@@ -64,11 +64,11 @@ int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei) {
     float lumaSigma = sqrt(lumaDeltaSum / pointNum);
     float crSigma = sqrt(crDeltaSum / pointNum);
     float cbSigma = sqrt(cbDeltaSum / pointNum);
-    for(int y = 0; y < hei; y++ ) {
-        for(int x = 0; x < wid; x++ ) {
+    for(int y = 0; y < hei; y+=scale ) {
+        for(int x = 0; x < wid; x+=scale ) {
             
-            binImage.data[y][x] = 0;
-            labelImage.data[y][x] = 0;
+            binImage.data[y/scale][x/scale] = 0;
+            labelImage.data[y/scale][x/scale] = 0;
 
             luma = &nv21_frame[x + y*wid];
             cr = &nv21_frame[ uv_begin + (y>>1)*wid + ((x>>1)<<1) ];
@@ -80,7 +80,7 @@ int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei) {
             if ( diffLuma < 6 * lumaSigma
                     && diffCr < 6 * crSigma
                     && diffCb < 6 * cbSigma ) {
-                binImage.data[y][x] = 1;
+                binImage.data[y/scale][x/scale] = 1;
                 centralArea ++;
             }
         }
@@ -112,7 +112,7 @@ static int createDistantImage(ByteImage &map, IntImage &distImage) {
     return maxv;
 }
 
-int LabelPalmArea(unsigned char *nv21_frame, int wid, int hei) {
+int LabelPalmArea(unsigned char *dst_frame) {
 
     int maxd = createDistantImage(binImage, labelImage);
     
@@ -124,7 +124,7 @@ int LabelPalmArea(unsigned char *nv21_frame, int wid, int hei) {
     for(int y = 0; y < labelImage.height; y++) {
         for(int x = 0; x < labelImage.width; x++) {
 
-            luma = &nv21_frame[x + y*wid];
+            luma = &dst_frame[x + y*labelImage.width];
             *luma = 0;
 
             if ( labelImage.data[y][x] == maxd) {
@@ -154,7 +154,7 @@ int LabelPalmArea(unsigned char *nv21_frame, int wid, int hei) {
             for ( int y1 = y - 1; y1 <= y + 1; y1 ++ ){
                 for ( int x1 = x - 1; x1 <= x + 1; x1 ++ ){
                     if ( binImage.data[y1][x1] == 0 && labelImage.data[y1][x1] > mind ) {
-                        luma = &nv21_frame[x1 + y1*wid];
+                        luma = &dst_frame[x1 + y1*labelImage.width];
                         if ( (labelImage.data[y1][x1] == (mind + 1)) 
                                 || (d == (maxd - mind - 1) )) {
                             *luma = 1;
