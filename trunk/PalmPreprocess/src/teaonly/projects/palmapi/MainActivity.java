@@ -37,6 +37,8 @@ public class MainActivity extends Activity
 
     private AppState state_ = AppState.INITED;
 
+    private byte[] rawFrame_ = null; 
+
     private boolean labelProcessing_ = false;
     private LabelThread labelThread_ = null;
     private byte[] labelFrame_ = null; 
@@ -44,7 +46,6 @@ public class MainActivity extends Activity
 
     private boolean procProcessing_ = false;
     private ProcThread procThread_ = null;
-    private byte[] procFrame_ = null; 
     private Bitmap procResultBMP_;
 
     @Override
@@ -60,7 +61,7 @@ public class MainActivity extends Activity
         setContentView(R.layout.main);
 
         SurfaceView cameraSurface = (SurfaceView)findViewById(R.id.surface_camera);
-        cameraView_ = new CameraView(cameraSurface, 320, 240, 640, 480);        
+        cameraView_ = new CameraView(cameraSurface, 640, 480, 640, 480);        
         cameraView_.setCameraReadyCallback(this);
 
         overlayView_ = (OverlayView)findViewById(R.id.surface_overlay);
@@ -70,17 +71,13 @@ public class MainActivity extends Activity
     
     @Override
     public void onCameraReady() {
-        int wid1 = cameraView_.PreviewWidth();
-        int hei1 = cameraView_.PreviewHeight();
-        labelFrame_ = new byte[wid1 * hei1 + wid1 * hei1 / 2];
+        int wid = cameraView_.PreviewWidth();
+        int hei = cameraView_.PreviewHeight();
+        rawFrame_ = new byte[wid * hei + wid * hei / 2];
+        labelFrame_ = new byte[wid*hei/2];
         labelResultBMP_ = Bitmap.createBitmap(overlayView_.getWidth(), overlayView_.getHeight(), Bitmap.Config.ARGB_8888);        
 
-        int wid2 = cameraView_.PictureWidth();
-        int hei2 = cameraView_.PictureHeight();
-        procFrame_ = new byte[wid2 * hei2 + wid2 * hei2 / 2];        
-        procResultBMP_ = Bitmap.createBitmap(overlayView_.getWidth(), overlayView_.getHeight(), Bitmap.Config.ARGB_8888);        
-
-        NativeAPI.nativePrepare( wid1, hei1, wid2, hei2);     
+        NativeAPI.nativePrepare(wid, hei, 2);     
 
         state_ = AppState.LABELING;
         cameraView_.SetPreview( previewCb_ ); 
@@ -118,7 +115,9 @@ public class MainActivity extends Activity
             waitCompleteLastLabeling();
             labelProcessing_ = false;
             state_ = AppState.PROCESSING;
-            cameraView_.TakePicture(pictureCb_);
+            //cameraView_.TakePicture(pictureCb_);
+            procThread_ = new ProcThread();
+            procThread_.start();
         }
 
         return false;
@@ -151,29 +150,13 @@ public class MainActivity extends Activity
             int hei = cameraView_.PreviewHeight();             
 
             ByteBuffer bbuffer = ByteBuffer.wrap(frame); 
-            bbuffer.get(labelFrame_, 0, wid * hei + wid * hei / 2);
+            bbuffer.get(rawFrame_, 0, wid * hei + wid * hei / 2);
 
             waitCompleteLastLabeling();
             labelThread_ = new LabelThread();
             labelThread_.start();
         }
     };
-
-    private PictureCallback pictureCb_ = new PictureCallback() {
-        @Override
-        public void onPictureTaken(byte[] frame, Camera c) {
-            
-            // copy to local memory
-            int wid = cameraView_.PictureWidth();
-            int hei = cameraView_.PictureHeight();             
-            ByteBuffer bbuffer = ByteBuffer.wrap(frame); 
-            bbuffer.get(procFrame_, 0, wid * hei + wid * hei / 2);
-
-            procThread_ = new ProcThread();
-            procThread_.start();
-        }         
-    };
-
 
     private class LabelThread extends Thread{
         private int width = cameraView_.PreviewWidth();
@@ -182,7 +165,7 @@ public class MainActivity extends Activity
         @Override
         public void run() {           
             labelResultBMP_.eraseColor(Color.TRANSPARENT);
-            NativeAPI.nativeLabelPalm( labelFrame_, cameraView_.PreviewWidth(), cameraView_.PreviewHeight(), labelResultBMP_ );
+            NativeAPI.nativeLabelPalm( rawFrame_, labelFrame_, labelResultBMP_ );
             overlayView_.DrawResult( labelResultBMP_ );
         }
     }
@@ -192,7 +175,7 @@ public class MainActivity extends Activity
         @Override
         public void run() {           
             // processing memory in natvie     
-
+            
         }
     }
 
