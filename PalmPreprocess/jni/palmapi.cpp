@@ -46,6 +46,7 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
         goto release;
     }
 
+#if 1
    for(int i = 0; i < hei; i++) {
     	for ( int j = 0; j < wid; j++) {
             if ( destPtr[j+i*wid] == 1){
@@ -63,7 +64,18 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
             }
         }	
     }
-    
+#else
+    for (int i = 0; i < (int)info.height; i++) {
+        for (int j = 0; j < (int)info.width; j++) {
+            int x = (int)(1.0 * i / info.height * wid);
+            int y = (int)(1.0 * (info.width - 1 - j) / info.width * hei);
+            if ( destPtr[x+y*wid] == 1) {
+                unsigned int* rgba = pixels + j + i*info.stride/4;
+                *rgba = 0xFF00FFFF;
+            } 
+        }
+    }
+#endif
     AndroidBitmap_unlockPixels(env, bmp);
 release:    
 	env->ReleaseByteArrayElements(src, framePtr, 0);   
@@ -79,12 +91,9 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeEnhencePalm)(JNIEnv* env, jclass clz, jby
 
     EnhencePalm((unsigned char *)mapPtr, (unsigned char *)framePtr, labelScale);
 
-#if 0
     // convert result to bitmap
 	AndroidBitmapInfo  info;
 	unsigned int *pixels;
-    int wid = picWid / labelScale;
-    int hei = picHei / labelScale;
  
 	if ((AndroidBitmap_getInfo(env, bmp, &info)) < 0) {  
     	goto release;
@@ -92,28 +101,22 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeEnhencePalm)(JNIEnv* env, jclass clz, jby
     if ((AndroidBitmap_lockPixels(env, bmp, (void **)&pixels)) < 0) { 
         goto release;
     }
-
-   for(int i = 0; i < hei; i++) {
-    	for ( int j = 0; j < wid; j++) {
-            if ( destPtr[j+i*wid] == 1){
-                
-                int y = (int)(1.0 * info.height / wid * j);
-                int x = (int)(1.0 * info.width / hei * (hei - i));
-                
-                for(int m = x-1; m < x+1; m++) 
-                for(int n = y-1; n < y+1; n++) {
-                    if ( m > 0 && n > 0 && m < (int)info.width && n < (int)info.height) {
-    		            unsigned int* rgba = pixels + m + n*info.stride/4;
-                        *rgba = 0xFF00FFFF;
-                    }
-                }
-            }
-        }	
-    }
     
+    for (int i = 0; i < (int)info.height; i++) {
+        for (int j = 0; j < (int)info.width; j++) {
+            int x = (int)(1.0 * i / info.height * picWid);
+            int y = (int)(1.0 * (info.width - 1 - j) / info.width * picHei);
+            if ( framePtr[x+y*picWid] != 0) {
+                unsigned char g = framePtr[x+y*picWid];
+                unsigned int* rgba = pixels + j + i*info.stride/4;
+                *rgba = 0xFF000000 + (g << 16) + (g << 8) + g;
+            } 
+        }
+    }
+  
     AndroidBitmap_unlockPixels(env, bmp);
+
 release:    
-#endif
 	env->ReleaseByteArrayElements(frame, framePtr, 0);   
 	env->ReleaseByteArrayElements(map, mapPtr, 0);   
 }
