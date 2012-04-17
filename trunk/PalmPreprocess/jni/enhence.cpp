@@ -118,8 +118,7 @@ static float FrangiValue(std::vector<double> &eig) {
     return ret;
 }
 
-//static void FrangiFilter(CharImage &gray, CharImage &map, FloatImage &ret, FloatImage &angle) {
-static void FrangiFilter(unsigned char *palmMap) {
+static void FrangiFilter(unsigned char *palmMap, int scale) {
     // Create integraled image
     CreateIntegraledImage(grayImage, intImage);   
 
@@ -128,7 +127,9 @@ static void FrangiFilter(unsigned char *palmMap) {
     std::vector<double> eig; 
     for(int y = 5; y < intImage.height-5; y++) {
         for(int x = 5; x < intImage.width-5; x++) {
-            if ( palmMap[x + y * intImage.width] == 0) {
+            int sx = x / scale;
+            int sy =  y / scale;
+            if (palmMap[sx + sy*intImage.width/scale] == 0){  
                 valueImage.data[y][x] = -1;
                 continue;
             }
@@ -145,16 +146,18 @@ void PrepareEnhence(int wid, int hei) {
     valueImage.resize(wid, hei);
 }
 
-int EnhencePalm(unsigned char *palmMap, int wid, int hei, unsigned char *gray_frame, int wid2, int hei2) {
+int EnhencePalm(unsigned char *palmMap, unsigned char *gray_frame, int scale) {
+    int wid = grayImage.width;
+    int hei = grayImage.height; 
     int outlinelx = wid;
     int outlinerx = 0;
     int outlinety = hei;
     int outlinedy = 0;
-    for (int y = 0; y < hei2; y++) {
-        for (int x = 0; x < wid2; x++) {
-            int sx = 1.0 * x * wid / wid2;
-            int sy = 1.0 * y * hei / hei2;
-            if ( palmMap[sx + sy*wid] > 0) {
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            int sx = x / scale;
+            int sy =  y / scale;
+            if ( palmMap[sx + sy*wid/scale] > 0) {
                 if ( x > outlinerx )
                     outlinerx = x;
                 if ( x < outlinelx )
@@ -168,7 +171,20 @@ int EnhencePalm(unsigned char *palmMap, int wid, int hei, unsigned char *gray_fr
         }   
     } 
    
-    FrangiFilter(0); 
+    FrangiFilter(palmMap, scale);
+    for (int y = outlinety; y <= outlinedy; y++) {
+        for (int x = outlinelx; x <= outlinerx; x++) {
+            int sx = x / scale;
+            int sy =  y / scale;
+            if ( palmMap[sx + sy*wid/scale] > 0) { 
+                if ( valueImage.data[y][x] > 0.01)
+                    gray_frame[x+y*wid] = 255;
+                else
+                    gray_frame[x+y*wid] = 0;
+            }
+        }   
+    } 
+
     return 0;
 }
 

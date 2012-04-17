@@ -38,15 +38,12 @@ public class MainActivity extends Activity
     private AppState state_ = AppState.INITED;
 
     private byte[] rawFrame_ = null; 
+    private byte[] labelFrame_ = null; 
+    private Bitmap resultBMP_;
 
     private boolean labelProcessing_ = false;
     private LabelThread labelThread_ = null;
-    private byte[] labelFrame_ = null; 
-    private Bitmap labelResultBMP_;
-
-    private boolean procProcessing_ = false;
     private ProcThread procThread_ = null;
-    private Bitmap procResultBMP_;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -75,8 +72,8 @@ public class MainActivity extends Activity
         int hei = cameraView_.PreviewHeight();
         rawFrame_ = new byte[wid * hei + wid * hei / 2];
         labelFrame_ = new byte[wid*hei/2];
-        labelResultBMP_ = Bitmap.createBitmap(overlayView_.getWidth(), overlayView_.getHeight(), Bitmap.Config.ARGB_8888);        
-
+        resultBMP_ = Bitmap.createBitmap(overlayView_.getWidth(), overlayView_.getHeight(), Bitmap.Config.ARGB_8888);        
+        
         NativeAPI.nativePrepare(wid, hei, 2);     
 
         state_ = AppState.LABELING;
@@ -115,7 +112,7 @@ public class MainActivity extends Activity
             waitCompleteLastLabeling();
             labelProcessing_ = false;
             state_ = AppState.PROCESSING;
-            //cameraView_.TakePicture(pictureCb_);
+            cameraView_.StopPreview();
             procThread_ = new ProcThread();
             procThread_.start();
         }
@@ -164,9 +161,9 @@ public class MainActivity extends Activity
 
         @Override
         public void run() {           
-            labelResultBMP_.eraseColor(Color.TRANSPARENT);
-            NativeAPI.nativeLabelPalm( rawFrame_, labelFrame_, labelResultBMP_ );
-            overlayView_.DrawResult( labelResultBMP_ );
+            resultBMP_.eraseColor(Color.TRANSPARENT);
+            NativeAPI.nativeLabelPalm( rawFrame_, labelFrame_, resultBMP_ );
+            overlayView_.DrawResult( resultBMP_ );
         }
     }
 
@@ -175,7 +172,7 @@ public class MainActivity extends Activity
         @Override
         public void run() {           
             // processing memory in natvie     
-            
+            NativeAPI.nativeEnhencePalm(labelFrame_, rawFrame_, resultBMP_); 
         }
     }
 
