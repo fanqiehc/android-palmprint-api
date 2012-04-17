@@ -4,9 +4,9 @@
 void PrepareLabelPalm(int wid, int hei);
 void PrepareEnhence(int wid, int hei);
 
-int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei);
-int LabelPalmArea(unsigned char *nv21_frame, int wid, int hei);
+int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei, int scale);
+int LabelPalmArea(unsigned char *dst_frame);
 
-int EnhencePalm(unsigned char *palmMap, int wid, int hei, unsigned char *gray_frame, int wid2, int hei2);
+//int EnhencePalm(unsigned char *palmMap, int wid, int hei, unsigned char *gray_frame, int wid2, int hei2);
 
 #endif
