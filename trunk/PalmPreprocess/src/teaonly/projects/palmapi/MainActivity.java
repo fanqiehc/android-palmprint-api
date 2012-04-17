@@ -171,8 +171,9 @@ public class MainActivity extends Activity
 
         @Override
         public void run() {           
-            // processing memory in natvie     
+            resultBMP_.eraseColor(Color.TRANSPARENT);
             NativeAPI.nativeEnhencePalm(labelFrame_, rawFrame_, resultBMP_); 
+            overlayView_.DrawResult( resultBMP_ );
         }
     }
 

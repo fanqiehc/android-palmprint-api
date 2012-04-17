@@ -118,7 +118,7 @@ static float FrangiValue(std::vector<double> &eig) {
     return ret;
 }
 
-static void FrangiFilter(unsigned char *palmMap, int scale) {
+void FrangiFilter(unsigned char *palmMap, int scale) {
     // Create integraled image
     CreateIntegraledImage(grayImage, intImage);   
 
@@ -170,21 +170,24 @@ int EnhencePalm(unsigned char *palmMap, unsigned char *gray_frame, int scale) {
             grayImage.data[y][x] = gray_frame[x+y*wid];
         }   
     } 
-   
+  
     FrangiFilter(palmMap, scale);
-    for (int y = outlinety; y <= outlinedy; y++) {
-        for (int x = outlinelx; x <= outlinerx; x++) {
+    
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
             int sx = x / scale;
             int sy =  y / scale;
             if ( palmMap[sx + sy*wid/scale] > 0) { 
-                if ( valueImage.data[y][x] > 0.01)
+                if ( valueImage.data[y][x] > 0.05)
                     gray_frame[x+y*wid] = 255;
                 else
-                    gray_frame[x+y*wid] = 0;
+                    gray_frame[x+y*wid] = 255 * valueImage.data[y][x] / 0.05+1;
+            } else {
+                gray_frame[x+y*wid] = 0;
             }
         }   
     } 
-
+    
     return 0;
 }
 
