@@ -178,10 +178,10 @@ int EnhencePalm(unsigned char *palmMap, unsigned char *gray_frame, int scale) {
             int sx = x / scale;
             int sy =  y / scale;
             if ( palmMap[sx + sy*wid/scale] > 0) { 
-                if ( valueImage.data[y][x] > 0.05)
+                if ( valueImage.data[y][x] > 0.02)
                     gray_frame[x+y*wid] = 255;
                 else
-                    gray_frame[x+y*wid] = 255 * valueImage.data[y][x] / 0.05+1;
+                    gray_frame[x+y*wid] = 255 * valueImage.data[y][x] / 0.02+1;
             } else {
                 gray_frame[x+y*wid] = 0;
             }
