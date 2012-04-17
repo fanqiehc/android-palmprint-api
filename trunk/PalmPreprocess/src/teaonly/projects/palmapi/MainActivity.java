@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.hardware.Camera.PictureCallback;
@@ -19,6 +20,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.MotionEvent;
 import android.view.Window;
@@ -34,6 +36,7 @@ public class MainActivity extends Activity
 
     private CameraView cameraView_;
     private OverlayView overlayView_;
+    private ProgressDialog processDialog = null;
 
     private AppState state_ = AppState.INITED;
 
@@ -109,12 +112,20 @@ public class MainActivity extends Activity
     public boolean onTouch(View v, MotionEvent evt) {
         if ( state_ == AppState.LABELING ) {
             cameraView_.SetPreview(null);
+            
+            processDialog = ProgressDialog.show(this, "", "Processing...", true);  
+            processDialog.show();
+
             waitCompleteLastLabeling();
             labelProcessing_ = false;
             state_ = AppState.PROCESSING;
             cameraView_.StopPreview();
             procThread_ = new ProcThread();
             procThread_.start();
+        } else if ( state_ == AppState.DISPLAY_SHOW){
+            state_ = AppState.LABELING;
+            cameraView_.SetPreview(previewCb_);
+            cameraView_.StartPreview();
         }
 
         return false;
@@ -174,6 +185,15 @@ public class MainActivity extends Activity
             resultBMP_.eraseColor(Color.TRANSPARENT);
             NativeAPI.nativeEnhencePalm(labelFrame_, rawFrame_, resultBMP_); 
             overlayView_.DrawResult( resultBMP_ );
+            new Handler(Looper.getMainLooper()).post(new Runnable(){
+                public void run() { 
+                    if (processDialog != null) {
+                        processDialog.dismiss();
+                        processDialog = null;   
+                        state_ = AppState.DISPLAY_SHOW;
+                    } 
+                }   
+            });     
         }
     }
 
