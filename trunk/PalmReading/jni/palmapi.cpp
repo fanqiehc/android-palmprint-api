@@ -22,6 +22,7 @@ JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint wi
     labelScale = scale;
     PrepareLabelPalm(picWid / scale, picHei / scale);
     PrepareEnhence(picWid, picHei);
+    PrepareMarkLines(picWid, picHei);
 }
 
 JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jbyteArray dst, jobject bmp) {
@@ -82,6 +83,7 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeEnhencePalm)(JNIEnv* env, jclass clz, jby
     jbyte* framePtr = env->GetByteArrayElements(frame, &b);
 
     EnhencePalm((unsigned char *)mapPtr, (unsigned char *)framePtr, labelScale);
+    MarkLines((unsigned char *)framePtr);
 
     // convert result to bitmap
 	AndroidBitmapInfo  info;
