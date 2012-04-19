@@ -46,7 +46,6 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
         goto release;
     }
 
-#if 1
    for(int i = 0; i < hei; i++) {
     	for ( int j = 0; j < wid; j++) {
             if ( destPtr[j+i*wid] == 1){
@@ -62,21 +61,14 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
                     }
                 }
             }
+            if ( destPtr[j+i*wid] == 3)
+                destPtr[j+i*wid] = 1;
+            else 
+                destPtr[j+i*wid] = 0;            
         }	
     }
-#else
-    for (int i = 0; i < (int)info.height; i++) {
-        for (int j = 0; j < (int)info.width; j++) {
-            int x = (int)(1.0 * i / info.height * wid);
-            int y = (int)(1.0 * (info.width - 1 - j) / info.width * hei);
-            if ( destPtr[x+y*wid] == 1) {
-                unsigned int* rgba = pixels + j + i*info.stride/4;
-                *rgba = 0xFF00FFFF;
-            } 
-        }
-    }
-#endif
-    AndroidBitmap_unlockPixels(env, bmp);
+    
+   AndroidBitmap_unlockPixels(env, bmp);
 release:    
 	env->ReleaseByteArrayElements(src, framePtr, 0);   
 	env->ReleaseByteArrayElements(dst, destPtr, 0);   
@@ -106,11 +98,14 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeEnhencePalm)(JNIEnv* env, jclass clz, jby
         for (int j = 0; j < (int)info.width; j++) {
             int x = (int)(1.0 * i / info.height * picWid);
             int y = (int)(1.0 * (info.width - 1 - j) / info.width * picHei);
-            if ( framePtr[x+y*picWid] != 0) {
-                unsigned char g = framePtr[x+y*picWid];
-                unsigned int* rgba = pixels + j + i*info.stride/4;
+            unsigned char g = framePtr[x+y*picWid];
+            unsigned int* rgba = pixels + j + i*info.stride/4;
+
+            if ( g == 255) {
+                *rgba = 0xFF0000FF;    
+            } else if ( g != 0) {
                 *rgba = 0xFF000000 + (g << 16) + (g << 8) + g;
-            } 
+            }
         }
     }
   

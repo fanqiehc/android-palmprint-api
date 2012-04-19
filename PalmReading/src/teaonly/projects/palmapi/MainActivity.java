@@ -112,14 +112,14 @@ public class MainActivity extends Activity
     public boolean onTouch(View v, MotionEvent evt) {
         if ( state_ == AppState.LABELING ) {
             cameraView_.SetPreview(null);
-            
+            cameraView_.StopPreview();
+
             processDialog = ProgressDialog.show(this, "", "Processing...", true);  
             processDialog.show();
 
             waitCompleteLastLabeling();
             labelProcessing_ = false;
             state_ = AppState.PROCESSING;
-            cameraView_.StopPreview();
             procThread_ = new ProcThread();
             procThread_.start();
         } else if ( state_ == AppState.DISPLAY_SHOW){

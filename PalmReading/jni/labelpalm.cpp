@@ -139,8 +139,9 @@ int LabelPalmArea(unsigned char *dst_frame) {
         }
     }
 
-    int mind = 3;
-    int dist = maxd - mind;
+    int mind1 = 3;
+    int mind2 = 6;
+    int dist = maxd - mind1;
     if ( dist <= 0)
         dist = 0;
 
@@ -153,11 +154,13 @@ int LabelPalmArea(unsigned char *dst_frame) {
 
             for ( int y1 = y - 1; y1 <= y + 1; y1 ++ ){
                 for ( int x1 = x - 1; x1 <= x + 1; x1 ++ ){
-                    if ( binImage.data[y1][x1] == 0 && labelImage.data[y1][x1] > mind ) {
+                    if ( binImage.data[y1][x1] == 0 && labelImage.data[y1][x1] > mind1 ) {
                         luma = &dst_frame[x1 + y1*labelImage.width];
-                        if ( (labelImage.data[y1][x1] == (mind + 1)) 
-                                || (d == (maxd - mind - 1) )) {
+                        if ( (labelImage.data[y1][x1] == (mind1 + 1)) 
+                                || (d == (maxd - mind1 - 1) )) {
                             *luma = 1;
+                        } else if ( labelImage.data[y1][x1] > mind2) {
+                            *luma = 3;
                         } else {
                             *luma = 2;      
                         }
