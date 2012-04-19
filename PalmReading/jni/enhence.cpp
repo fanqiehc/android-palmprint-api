@@ -146,7 +146,7 @@ void PrepareEnhence(int wid, int hei) {
     valueImage.resize(wid, hei);
 }
 
-int EnhencePalm(unsigned char *palmMap, unsigned char *gray_frame, int scale) {
+void EnhencePalm(unsigned char *palmMap, unsigned char *gray_frame, int scale) {
     int wid = grayImage.width;
     int hei = grayImage.height; 
     int outlinelx = wid;
@@ -199,7 +199,6 @@ int EnhencePalm(unsigned char *palmMap, unsigned char *gray_frame, int scale) {
             }
         }   
     } 
-    return 0;
-}
 
+}
 
