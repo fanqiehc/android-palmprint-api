@@ -168,26 +168,37 @@ int EnhencePalm(unsigned char *palmMap, unsigned char *gray_frame, int scale) {
                     outlinety = y;
             }   
             grayImage.data[y][x] = gray_frame[x+y*wid];
+            gray_frame[x+y*wid] = 0;
         }   
     } 
-  
+    int outlineHeight = outlinedy - outlinety;
+    int outlineWidth = outlinerx - outlinelx;
+
     FrangiFilter(palmMap, scale);
+
+    float maxvalue = 0.0;
+    for (int y=(outlinety+outlineHeight/3); y <= (outlinedy-outlineHeight/3); y++) {
+        for (int x=(outlinelx+outlineWidth/3); x <= (outlinerx-outlineWidth/3); x++) {
+            if ( valueImage.data[y][x] > maxvalue)
+                maxvalue = valueImage.data[y][x];       
+        } 
+    }
+    maxvalue = maxvalue / 2;
     
-    for (int y = 0; y < hei; y++) {
-        for (int x = 0; x < wid; x++) {
+    for (int y=(outlinety+0); y <= (outlinedy-0); y++) {
+        for (int x=(outlinelx+0); x <= (outlinerx-0); x++) {
             int sx = x / scale;
             int sy =  y / scale;
             if ( palmMap[sx + sy*wid/scale] > 0) { 
-                if ( valueImage.data[y][x] > 0.02)
+                if ( valueImage.data[y][x] > maxvalue) {
                     gray_frame[x+y*wid] = 255;
-                else
-                    gray_frame[x+y*wid] = 255 * valueImage.data[y][x] / 0.02+1;
-            } else {
-                gray_frame[x+y*wid] = 0;
+                } else {
+                    gray_frame[x+y*wid] = 255 * valueImage.data[y][x] / maxvalue+1;
+                    //gray_frame[x+y*wid] = 1;
+                }
             }
         }   
     } 
-    
     return 0;
 }
 
