@@ -136,10 +136,18 @@ int MarkLines(unsigned char *gray_frame) {
         for(int i = 0; i < (int)currentMargin.size(); i++) {
             int x = currentMargin[i].first;
             int y = currentMargin[i].second;
-
+            
+            bool found = false;
             for(int yy = y - 1; yy <= y + 1; yy++){
                 for( int xx = x - 1; xx <= x + 1; xx++){
                     if ( grayImage.data[yy][xx] >= 48 && binImage.data[yy][xx] == 0) {
+                        found = true;
+                    }
+                }
+            }
+            if ( found) {
+                for(int yy = y - 1; yy <= y + 1; yy++){
+                    for( int xx = x - 1; xx <= x + 1; xx++){
                         pos.first = xx;
                         pos.second = yy;
                         newMargin.push_back(pos);
