@@ -17,9 +17,9 @@ void PrepareLabelPalm(int wid, int hei) {
 int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei, int scale) {
     // central area define. 
     int ltx = wid*2/5;
-    int lty = hei/3;
-    int rbx = wid*2/5 + wid/3;
-    int rby = hei/3 + hei/3;
+    int lty = hei/4;
+    int rbx = wid*2/5 + wid*2/5;
+    int rby = hei/4 + hei/2;
    
     int centralArea = 0;
 
@@ -38,6 +38,7 @@ int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei, int scale) {
             lumaSum += *luma;
             cbSum += *cb;
             crSum += *cr;
+
         }
     }
 
@@ -66,9 +67,14 @@ int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei, int scale) {
     float cbSigma = sqrt(cbDeltaSum / pointNum);
     for(int y = 0; y < hei; y+=scale ) {
         for(int x = 0; x < wid; x+=scale ) {
-            
-            binImage.data[y/scale][x/scale] = 0;
             labelImage.data[y/scale][x/scale] = 0;
+
+            if ( y >= lty && y <= rby && x >= ltx && x <= rbx) {
+                binImage.data[y/scale][x/scale] = 1;
+                continue;
+            }
+
+            binImage.data[y/scale][x/scale] = 0;
 
             luma = &nv21_frame[x + y*wid];
             cr = &nv21_frame[ uv_begin + (y>>1)*wid + ((x>>1)<<1) ];
@@ -77,9 +83,9 @@ int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei, int scale) {
             float diffLuma = abs(*luma - lumaMean);
             float diffCr = abs(*cr - crMean);
             float diffCb = abs(*cb - cbMean);
-            if ( diffLuma < 6 * lumaSigma
-                    && diffCr < 6 * crSigma
-                    && diffCb < 6 * cbSigma ) {
+            if ( diffLuma < 4 * lumaSigma
+                    && diffCr < 4 * crSigma
+                    && diffCb < 4 * cbSigma ) {
                 binImage.data[y/scale][x/scale] = 1;
                 centralArea ++;
             }
@@ -139,8 +145,7 @@ int LabelPalmArea(unsigned char *dst_frame) {
         }
     }
 
-    int mind1 = 3;
-    int mind2 = 6;
+    int mind1 = 5;
     int dist = maxd - mind1;
     if ( dist <= 0)
         dist = 0;
@@ -159,8 +164,6 @@ int LabelPalmArea(unsigned char *dst_frame) {
                         if ( (labelImage.data[y1][x1] == (mind1 + 1)) 
                                 || (d == (maxd - mind1 - 1) )) {
                             *luma = 1;
-                        } else if ( labelImage.data[y1][x1] > mind2) {
-                            *luma = 3;
                         } else {
                             *luma = 2;      
                         }
@@ -178,6 +181,7 @@ int LabelPalmArea(unsigned char *dst_frame) {
 
         currentMargin = newMargin;
     }
+
 
     return 1;
 }

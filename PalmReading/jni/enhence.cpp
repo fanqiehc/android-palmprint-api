@@ -183,7 +183,7 @@ void EnhencePalm(unsigned char *palmMap, unsigned char *gray_frame, int scale) {
                 maxvalue = valueImage.data[y][x];       
         } 
     }
-    maxvalue = maxvalue / 2;
+    maxvalue = maxvalue / 4;
     
     for (int y=(outlinety+0); y <= (outlinedy-0); y++) {
         for (int x=(outlinelx+0); x <= (outlinerx-0); x++) {

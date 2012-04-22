@@ -140,14 +140,15 @@ int MarkLines(unsigned char *gray_frame) {
             bool found = false;
             for(int yy = y - 1; yy <= y + 1; yy++){
                 for( int xx = x - 1; xx <= x + 1; xx++){
-                    if ( grayImage.data[yy][xx] >= 48 && binImage.data[yy][xx] == 0) {
+                    if ( grayImage.data[yy][xx] >= 64 && binImage.data[yy][xx] == 0) {
                         found = true;
                     }
                 }
             }
             if ( found) {
-                for(int yy = y - 1; yy <= y + 1; yy++){
-                    for( int xx = x - 1; xx <= x + 1; xx++){
+                int d = 1;
+                for(int yy = y - d; yy <= y + d; yy++){
+                    for( int xx = x - d; xx <= x + d; xx++){
                         pos.first = xx;
                         pos.second = yy;
                         newMargin.push_back(pos);
@@ -158,18 +159,18 @@ int MarkLines(unsigned char *gray_frame) {
         }
         currentMargin = newMargin;
     }
- 
     // remain top five longest lines
     std::vector<int> labels;
-    BwLabel(binImage, labels, 5);    
-    
+    BwLabel(binImage, labels, 5); 
+
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
             if ( binImage.data[y][x] > 0) {
                 gray_frame[x+y*wid] = 255;
-            } else {
+            } 
+            else {
                 gray_frame[x+y*wid] = 0;
-            }                
+            }   
         }
     } 
 

@@ -183,7 +183,7 @@ public class MainActivity extends Activity
         @Override
         public void run() {           
             resultBMP_.eraseColor(Color.TRANSPARENT);
-            NativeAPI.nativeEnhencePalm(labelFrame_, rawFrame_, resultBMP_); 
+            NativeAPI.nativeReadingPalm(labelFrame_, rawFrame_, resultBMP_); 
             overlayView_.DrawResult( resultBMP_ );
             new Handler(Looper.getMainLooper()).post(new Runnable(){
                 public void run() { 
