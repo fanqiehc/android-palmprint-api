@@ -2,6 +2,7 @@
 #include <utility>
 #include <algorithm>
 #include <list>
+#include <map>
 
 #include <jni.h>
 #include <android/log.h>
@@ -90,11 +91,20 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
     std::sort(linkNumberSorted.begin(), linkNumberSorted.end());
     
     int min_size = linkNumberSorted[ (linkNumberSorted.size() - top) < 0? 0 : linkNumberSorted.size() - top ];
-    
+    std::map<int, int> sortedLabel;
+
     for(int i = 0; i < (int)linkNumber.size(); i++) {
         if ( linkNumber[i] >= min_size) {
-            labels.push_back(i);
+            //labels.push_back(i);
+            if ( sortedLabel.count( linkNumber[i] ) == 0)
+                sortedLabel[ linkNumber[i] ] = i; 
+            else 
+                sortedLabel[ linkNumber[i] + i%3 ] = i;
         }
+    }
+    
+    for(std::map<int,int>::reverse_iterator i = sortedLabel.rbegin(); i != sortedLabel.rend(); i++) {
+        labels.push_back( i->second );
     }
 
     for(int y = 0; y < bwimg.height; y++) {
@@ -104,7 +114,6 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
             }
         }
     } 
-
 }
 
 static void ClassifyLines(unsigned char *gray_frame, std::vector<int> &labels) {
@@ -148,9 +157,9 @@ static void ClassifyLines(unsigned char *gray_frame, std::vector<int> &labels) {
             }
         }      
         
-        if ( header > 4*life ) {
+        if ( header > 9*life ) {
             markv = -1;
-        } else if ( life > 4*header) {
+        } else if ( life > 9*header) {
             markv = -3;
         } else {
             markv = -2;
@@ -163,9 +172,44 @@ static void ClassifyLines(unsigned char *gray_frame, std::vector<int> &labels) {
                 }
             }
         }  
-       
+    
     }
 }
+
+#if 0
+static void CombinLines(std::vector<int> &labels) {
+    // get the outline of palm area
+    int wid = grayImage.width;
+    int hei = grayImage.height; 
+    int scale = 3;
+
+    std::vector< std::pair<int,int> > combined_label;
+    std::pair<int, int> equal;
+    for (int y = 0; y < hei/scale; y++) {
+        for (int x = 0; x < wid/scale; x++) {
+            int v = 0;   
+            for(int xx = x; xx < x*scale; xx+) {
+                for (int yy = y; yy < y*scale; yy++) {
+                    if ( binImage.data[yy][xx] > 0) {
+                        if ( v == 0) {
+                            v = binImage.data[yy][xx];
+                        } else if ( v != binImage.data[yy][xx]) {
+                            equal.first = v;
+                            equal.second = binImage.data[yy][xx];
+                            combined_label.push_back(equal);
+                            v = binImage.data[yy][xx];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for(unsigned int n = 0; n < combined_label.size(); n++) {
+        
+    }
+}
+#endif
 
 int MarkLines(unsigned char *gray_frame) {
     // copy data to local image struct
@@ -222,8 +266,11 @@ int MarkLines(unsigned char *gray_frame) {
 
     // remain top four longest lines
     std::vector<int> labels;
-    BwLabel(binImage, labels, 4); 
-   
+    BwLabel(binImage, labels, 5); 
+    
+    // try combing the candidated lines
+    //CombinLines(labels);
+    
     // classify the lines based on the position
     ClassifyLines(gray_frame,labels);
 
