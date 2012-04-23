@@ -107,6 +107,66 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
 
 }
 
+static void ClassifyLines(unsigned char *gray_frame, std::vector<int> &labels) {
+    // get the outline of palm area
+    int wid = grayImage.width;
+    int hei = grayImage.height; 
+    int outlinelx = wid;
+    int outlinerx = 0;
+    int outlinety = hei;
+    int outlinedy = 0;
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            if ( gray_frame[x+y*wid] > 0) {
+                if ( x > outlinerx )
+                    outlinerx = x;
+                if ( x < outlinelx )
+                    outlinelx = x;
+                if ( y > outlinedy )
+                    outlinedy = y;
+                if ( y < outlinety )
+                    outlinety = y;
+            }   
+        }   
+    } 
+    
+    // try to find most life likes.
+    for(unsigned int n = 0; n < labels.size(); n++) {
+        int life = 0;
+        int header = 0;
+        int markv = 0;
+        for( int y = outlinety; y <= outlinedy; y++) {
+            for( int x = outlinelx; x <= outlinerx; x++) {
+                if ( binImage.data[y][x] == labels[n] ) {
+                    float mapx = (x - outlinelx) * 1.0 / (outlinerx - outlinelx);
+                    float mapy = 1 - (y - outlinety) * 1.0 / (outlinedy - outlinety);
+                    if ( mapx > mapy)
+                        header++;
+                    else
+                        life++;
+                }
+            }
+        }      
+        
+        if ( header > 4*life ) {
+            markv = -1;
+        } else if ( life > 4*header) {
+            markv = -3;
+        } else {
+            markv = -2;
+        }
+
+        for( int y = outlinety; y <= outlinedy; y++) {
+            for( int x = outlinelx; x <= outlinerx; x++) {
+                if ( binImage.data[y][x] == labels[n] ) {
+                    binImage.data[y][x] = markv;
+                }
+            }
+        }  
+       
+    }
+}
+
 int MarkLines(unsigned char *gray_frame) {
     // copy data to local image struct
     int wid = grayImage.width;
@@ -159,20 +219,21 @@ int MarkLines(unsigned char *gray_frame) {
         }
         currentMargin = newMargin;
     }
-    // remain top five longest lines
-    std::vector<int> labels;
-    BwLabel(binImage, labels, 5); 
 
+    // remain top four longest lines
+    std::vector<int> labels;
+    BwLabel(binImage, labels, 4); 
+   
+    // classify the lines based on the position
+    ClassifyLines(gray_frame,labels);
+
+#if 1
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
-            if ( binImage.data[y][x] > 0) {
-                gray_frame[x+y*wid] = 255;
-            } 
-            else {
-                gray_frame[x+y*wid] = 0;
-            }   
+            gray_frame[x+y*wid] = -1 * binImage.data[y][x];
         }
     } 
-
+#endif
+ 
     return 0;
 }

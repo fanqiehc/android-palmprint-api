@@ -135,11 +135,13 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jby
             int y = (int)(1.0 * (info.width - 1 - j) / info.width * picHei);
             unsigned char g = framePtr[x+y*picWid];
             unsigned int* rgba = pixels + j + i*info.stride/4;
-
-            if ( g == 255) {
-                *rgba = 0xFF0000FF;    
-            } else if ( g != 0) {
-                *rgba = 0xFF000000 + (g << 16) + (g << 8) + g;
+            
+            if ( g == 1) {
+                *rgba = 0xFFFF0000;
+            } else if (g==2) {
+                *rgba = 0xFF00FF00;
+            } else if (g==3) {
+                *rgba = 0xFF0000FF;
             }
         }
     }
