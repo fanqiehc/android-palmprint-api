@@ -176,40 +176,45 @@ static void ClassifyLines(unsigned char *gray_frame, std::vector<int> &labels) {
     }
 }
 
-#if 0
 static void CombinLines(std::vector<int> &labels) {
     // get the outline of palm area
     int wid = grayImage.width;
     int hei = grayImage.height; 
     int scale = 3;
+    int combinedValue = labels.back();
 
-    std::vector< std::pair<int,int> > combined_label;
-    std::pair<int, int> equal;
-    for (int y = 0; y < hei/scale; y++) {
-        for (int x = 0; x < wid/scale; x++) {
+    for (int y = 0; y < hei; y+=scale) {
+        for (int x = 0; x < wid; x+=scale) {
             int v = 0;   
-            for(int xx = x; xx < x*scale; xx+) {
-                for (int yy = y; yy < y*scale; yy++) {
-                    if ( binImage.data[yy][xx] > 0) {
-                        if ( v == 0) {
-                            v = binImage.data[yy][xx];
-                        } else if ( v != binImage.data[yy][xx]) {
-                            equal.first = v;
-                            equal.second = binImage.data[yy][xx];
-                            combined_label.push_back(equal);
-                            v = binImage.data[yy][xx];
-                        }
+            for(int xx = x; xx < x+scale; xx++) {
+                for (int yy = y; yy < y+scale; yy++) {
+                    if ( binImage.data[yy][xx] > 0 && binImage.data[yy][xx] != combinedValue ) {
+                        v = binImage.data[yy][xx];
+                    } else if ( binImage.data[yy][xx] == combinedValue && v != 0) {
+                        combinedValue = v;
+                        goto done;
                     }
                 }
             }
         }
     }
 
-    for(unsigned int n = 0; n < combined_label.size(); n++) {
-        
+done:
+
+    if ( combinedValue == labels.back() ) {
+        labels.pop_back();                      //just ignor this line
+    } else {
+        for (int y = 0; y < hei; y++) {
+            for (int x = 0; x < wid/scale; x++) {
+                if ( binImage.data[y][x] == labels.back() )
+                    binImage.data[y][x] = combinedValue;
+            }
+        }
+
+        labels.pop_back();                      //combin this line 
     }
+
 }
-#endif
 
 int MarkLines(unsigned char *gray_frame) {
     // copy data to local image struct
@@ -266,10 +271,12 @@ int MarkLines(unsigned char *gray_frame) {
 
     // remain top four longest lines
     std::vector<int> labels;
-    BwLabel(binImage, labels, 5); 
+    BwLabel(binImage, labels, 4); 
     
     // try combing the candidated lines
-    //CombinLines(labels);
+    if ( labels.size() == 4) {
+        CombinLines(labels);
+    }
     
     // classify the lines based on the position
     ClassifyLines(gray_frame,labels);
