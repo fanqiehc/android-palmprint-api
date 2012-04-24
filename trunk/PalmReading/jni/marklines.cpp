@@ -109,7 +109,7 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
     } 
 }
 
-#if 1
+#if 0
 static void ClassifyLines(std::vector<int> &labels, int leftOrRight) {
     // get the outline of palm area
     int wid = labelImage.width;
@@ -213,6 +213,7 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
             break;
         }
     }
+
 #if 0
     int lifeLeftx = 0; 
     int lifeLefty = 0;
@@ -451,7 +452,7 @@ int MarkLines(unsigned char *gray_frame) {
    
     // try combing the candidated lines
     while ( labels.size() > 3) {
-        CombinLines(labels, 5);
+        CombinLines(labels, 3);
     }
 
     for (int y = 0; y < hei; y++) {
