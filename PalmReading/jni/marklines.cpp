@@ -32,7 +32,7 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
     
     for(int y = 0; y < bwimg.height; y++) {
         for(int x = 0; x < bwimg.width; x++) {
-            if ( bwimg.data[y][x] != -1) {
+            if ( bwimg.data[y][x] == 0) {
                 continue;
             } 
 
@@ -67,8 +67,8 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
         }
     }
 
-    std::vector<int> linkNumber;
-    linkNumber.resize( currentMaxLabel + 1, 0);
+    std::map<int, int> labelNumber;
+    std::map<int, int> sortedLabel;
     int lastv = 0;
     int lastm = 0;
     for(int y = 0; y < bwimg.height; y++) {
@@ -79,36 +79,30 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
                     lastm = findRoot( links, bwimg.data[y][x]);
                 }
                 bwimg.data[y][x] = lastm;
-                linkNumber[ lastm ] ++;
+                if ( labelNumber.count( lastm ) == 0)
+                    labelNumber[ lastm ] = 1; 
+                else 
+                    labelNumber[ lastm ] = labelNumber[ lastm ] + 1;
             }
         }
     }
-    linkNumber[0] = 0;  
-
-    // select top lengest linses
-    std::vector<int> linkNumberSorted = linkNumber;
-    std::sort(linkNumberSorted.begin(), linkNumberSorted.end());
     
-    int min_size = linkNumberSorted[ (linkNumberSorted.size() - top) < 0? 0 : linkNumberSorted.size() - top ];
-    std::map<int, int> sortedLabel;
-
-    for(int i = 0; i < (int)linkNumber.size(); i++) {
-        if ( linkNumber[i] >= min_size) {
-            //labels.push_back(i);
-            if ( sortedLabel.count( linkNumber[i] ) == 0)
-                sortedLabel[ linkNumber[i] ] = i; 
-            else 
-                sortedLabel[ linkNumber[i] + i%3 ] = i;
-        }
+    for(std::map<int,int>::iterator i = labelNumber.begin(); i != labelNumber.end(); i++) {
+        sortedLabel[ i->second ] = i->first;
     }
     
+    labelNumber.clear();
     for(std::map<int,int>::reverse_iterator i = sortedLabel.rbegin(); i != sortedLabel.rend(); i++) {
+        if ( labels.size() >= (unsigned int)top)
+            break;
+
         labels.push_back( i->second );
+        labelNumber[ i->second ] = i->first;
     }
 
     for(int y = 0; y < bwimg.height; y++) {
         for(int x = 0; x < bwimg.width; x++) {
-            if ( linkNumber[ bwimg.data[y][x] ] < min_size) {
+            if ( labelNumber.count( bwimg.data[y][x]) == 0) {
                 bwimg.data[y][x] = 0;
             }
         }
@@ -195,7 +189,7 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
     int lifeRightx = 0, lifeRighty = 0;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
-            if ( labelImage.data[y][x]  > 0 ) {
+            if ( labelImage.data[y][x] > 0 ) {
                 if ( y < headTopy) {
                     headTopx = x;
                     headTopy = y;
@@ -210,7 +204,7 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
     int header = labelImage.data[headTopy][headTopx];
     int life = labelImage.data[lifeRighty][lifeRightx];
     if ( header == life)      
-        return 0; 
+        return -1; 
 
     int heart = -1;
     for(int i = 0; i < (int)labels.size(); i++) {
@@ -219,7 +213,7 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
             break;
         }
     }
-
+#if 0
     int lifeLeftx = 0; 
     int lifeLefty = 0;
     int lifeNumber = 0;
@@ -248,7 +242,7 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
     while( currentMargin.size() > 0) {
         newMargin.clear();
 
-        if ( currentMargin[0].first <= lifeLeftx )
+        if ( currentMargin[0].second <= lifeLefty )
             break;            
 
         for(int i = 0; i < (int)currentMargin.size(); i++) {
@@ -276,20 +270,30 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
     if ( markedLifeNumber * 10 / lifeNumber < 8) {
         heart = life;
     }
-    
+#endif 
+
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
-            if ( labelImage.data[y][x] != 0) {
-                if ( labelImage.data[y][x] == life)
-                    labelImage.data[y][x] = 1;
-                else if ( labelImage.data[y][x] == heart)
-                    labelImage.data[y][x] = 2;
-                else if ( labelImage.data[y][x] == header)
-                    labelImage.data[y][x] = 3;
-                else
-                    labelImage.data[y][x] = 0;
-            }
+            if ( labelImage.data[y][x] == life)
+                labelImage.data[y][x] = 1;
+            else if ( labelImage.data[y][x] == heart)
+                labelImage.data[y][x] = 2;
+            else if ( labelImage.data[y][x] == header)
+                labelImage.data[y][x] = 3;
+            else
+                labelImage.data[y][x] = 0;
         }
+    }
+
+    if ( leftOrRight == 2) {
+        for (int y = 0; y < hei>>1; y++) {
+            for (int x = 0; x < wid; x++) {
+                int yy = hei - 1 - y;
+                int temp = labelImage.data[yy][x];
+                labelImage.data[yy][x] = labelImage.data[y][x];
+                labelImage.data[y][x] = temp;
+            }
+        }    
     }
 
     return 1;
@@ -303,12 +307,12 @@ static void CombinLines(std::vector<int> &labels, int dist) {
     int hei = labelImage.height; 
     int combinedValue = labels.back();
 
-    for (int y = 0; y < hei; y+=dist) {
-        for (int x = 0; x < wid; x+=dist) {
+    for (int y = dist; y < hei-dist; y+=dist) {
+        for (int x = dist; x < wid-dist; x+=dist) {
             int cv = 0;   
             int v = 0;
-            for(int xx = x; xx < x+dist; xx++) {
-                for (int yy = y; yy < y+dist; yy++) {
+            for(int xx = x - dist; xx < x+dist; xx++) {
+                for (int yy = y - dist; yy < y+dist; yy++) {
                     if ( labelImage.data[yy][xx] > 0 && labelImage.data[yy][xx] != combinedValue ) {
                         v = labelImage.data[yy][xx];
                     } else if ( labelImage.data[yy][xx] == combinedValue ) {
@@ -324,7 +328,6 @@ static void CombinLines(std::vector<int> &labels, int dist) {
     }
 
 done:
-
     if ( combinedValue == labels.back() ) {
         for (int y = 0; y < hei; y++) {
             for(int x = 0; x < wid; x++) {
@@ -427,11 +430,9 @@ int MarkLines(unsigned char *gray_frame) {
             int x = currentMargin[i].first;
             int y = currentMargin[i].second;
             
-            bool found = false;
             for(int yy = y - 1; yy <= y + 1; yy++){
                 for( int xx = x - 1; xx <= x + 1; xx++){
                     if ( gray_frame[xx+yy*wid] >= 96 && labelImage.data[yy][xx] == 0) {
-                        found = true;
                         pos.first = xx;
                         pos.second = yy;
                         newMargin.push_back(pos);
@@ -439,19 +440,6 @@ int MarkLines(unsigned char *gray_frame) {
                     }
                 }
             }
-            /*
-            if ( found) {
-                int d = 1;
-                for(int yy = y - d; yy <= y + d; yy++){
-                    for( int xx = x - d; xx <= x + d; xx++){
-                        pos.first = xx;
-                        pos.second = yy;
-                        newMargin.push_back(pos);
-                        labelImage.data[yy][xx] = -1;
-                    }
-                }
-            }
-            */
         }
         currentMargin = newMargin;
     }
@@ -459,13 +447,24 @@ int MarkLines(unsigned char *gray_frame) {
     // remain top four longest lines
     std::vector<int> labels;
     BwLabel(labelImage, labels, 16); 
-    
+ 
+   
     // try combing the candidated lines
     while ( labels.size() > 3) {
-        CombinLines(labels, 8);
+        CombinLines(labels, 5);
     }
 
-    
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            if ( labelImage.data[y][x] > 0) {
+                if ( std::find(labels.begin(), labels.end(), labelImage.data[y][x])
+                        == labels.end() ) {
+                    LOGD("CombinLines is Error!!!!!!!");
+                }
+            }
+        }
+    } 
+ 
     // classify the lines based on the position
     ClassifyLines(labels, leftOrRight);
 
