@@ -11,12 +11,11 @@
 #define  LOG_TAG    "TEAONLY"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)  
 
-static ByteImage  grayImage;
-static IntImage  binImage;
+
+static IntImage labelImage;
 
 void PrepareMarkLines(int wid, int hei) {
-    grayImage.resize(wid, hei);
-    binImage.resize(wid, hei);
+    labelImage.resize(wid, hei);
 }
 
 static int findRoot(std::vector<int> &links, int x) {
@@ -116,17 +115,18 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
     } 
 }
 
-static void ClassifyLines(unsigned char *gray_frame, std::vector<int> &labels) {
+#if 1
+static void ClassifyLines(std::vector<int> &labels, int leftOrRight) {
     // get the outline of palm area
-    int wid = grayImage.width;
-    int hei = grayImage.height; 
+    int wid = labelImage.width;
+    int hei = labelImage.height; 
     int outlinelx = wid;
     int outlinerx = 0;
     int outlinety = hei;
     int outlinedy = 0;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
-            if ( gray_frame[x+y*wid] > 0) {
+            if ( labelImage.data[y][x] > 0) {
                 if ( x > outlinerx )
                     outlinerx = x;
                 if ( x < outlinelx )
@@ -146,7 +146,7 @@ static void ClassifyLines(unsigned char *gray_frame, std::vector<int> &labels) {
         int markv = 0;
         for( int y = outlinety; y <= outlinedy; y++) {
             for( int x = outlinelx; x <= outlinerx; x++) {
-                if ( binImage.data[y][x] == labels[n] ) {
+                if ( labelImage.data[y][x] == labels[n] ) {
                     float mapx = (x - outlinelx) * 1.0 / (outlinerx - outlinelx);
                     float mapy = 1 - (y - outlinety) * 1.0 / (outlinedy - outlinety);
                     if ( mapx > mapy)
@@ -158,39 +158,163 @@ static void ClassifyLines(unsigned char *gray_frame, std::vector<int> &labels) {
         }      
         
         if ( header > 9*life ) {
-            markv = -1;
+            markv = 1;
         } else if ( life > 9*header) {
-            markv = -3;
+            markv = 3;
         } else {
-            markv = -2;
+            markv = 2;
         }
 
         for( int y = outlinety; y <= outlinedy; y++) {
             for( int x = outlinelx; x <= outlinerx; x++) {
-                if ( binImage.data[y][x] == labels[n] ) {
-                    binImage.data[y][x] = markv;
+                if ( labelImage.data[y][x] == labels[n] ) {
+                    labelImage.data[y][x] = markv;
                 }
             }
         }  
-    
     }
 }
+#else
+static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
+    int wid = labelImage.width;
+    int hei = labelImage.height;
 
-static void CombinLines(std::vector<int> &labels) {
+    if ( leftOrRight == 2) {
+        for (int y = 0; y < hei>>1; y++) {
+            for (int x = 0; x < wid; x++) {
+                int yy = hei - 1 - y;
+                int temp = labelImage.data[yy][x];
+                labelImage.data[yy][x] = labelImage.data[y][x];
+                labelImage.data[y][x] = temp;
+            }
+        }    
+    }
+
+    // find the head and life
+    int headTopx = 0, headTopy = hei;
+    int lifeRightx = 0, lifeRighty = 0;
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            if ( labelImage.data[y][x]  > 0 ) {
+                if ( y < headTopy) {
+                    headTopx = x;
+                    headTopy = y;
+                }
+                if ( x > lifeRightx) {
+                    lifeRighty = y;
+                    lifeRightx = x;
+                }
+            } 
+        }
+    }
+    int header = labelImage.data[headTopy][headTopx];
+    int life = labelImage.data[lifeRighty][lifeRightx];
+    if ( header == life)      
+        return 0; 
+
+    int heart = -1;
+    for(int i = 0; i < (int)labels.size(); i++) {
+        if ( labels[i] != header && labels[i] != life) {
+            heart = labels[i];
+            break;
+        }
+    }
+
+    int lifeLeftx = 0; 
+    int lifeLefty = 0;
+    int lifeNumber = 0;
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            if ( labelImage.data[y][x] == life ) {
+                if ( y > lifeLefty){
+                    lifeLeftx = x;
+                    lifeLefty = y;
+                    lifeNumber ++;
+                }
+            } 
+        }
+    }
+   
+    std::vector< std::pair<int,int> > currentMargin;
+    std::vector< std::pair<int,int> > newMargin;
+    std::pair<int,int> pos;
+    
+    int markedLifeNumber = 0;
+    labelImage.data[lifeRighty][lifeRightx] = -1 * life;
+    pos.first = lifeRightx;
+    pos.second = lifeRighty;
+    currentMargin.push_back(pos);
+
+    while( currentMargin.size() > 0) {
+        newMargin.clear();
+
+        if ( currentMargin[0].first <= lifeLeftx )
+            break;            
+
+        for(int i = 0; i < (int)currentMargin.size(); i++) {
+            int x = currentMargin[i].first;
+            int y = currentMargin[i].second;
+
+            for(int yy = y - 1; yy <= y + 1; yy++){
+                for( int xx = x - 1; xx <= x + 1; xx++){
+                    if ( labelImage.data[yy][xx] == life ) {
+                        labelImage.data[yy][xx] = -1 * life;
+                        pos.first = xx;
+                        pos.second = yy;
+                        newMargin.push_back(pos);
+                        markedLifeNumber ++;
+                    }
+                }
+            }
+        }
+
+        currentMargin = newMargin;
+    }
+
+    life = -1 * life;    
+
+    if ( markedLifeNumber * 10 / lifeNumber < 8) {
+        heart = life;
+    }
+    
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            if ( labelImage.data[y][x] != 0) {
+                if ( labelImage.data[y][x] == life)
+                    labelImage.data[y][x] = 1;
+                else if ( labelImage.data[y][x] == heart)
+                    labelImage.data[y][x] = 2;
+                else if ( labelImage.data[y][x] == header)
+                    labelImage.data[y][x] = 3;
+                else
+                    labelImage.data[y][x] = 0;
+            }
+        }
+    }
+
+    return 1;
+}    
+#endif
+
+
+static void CombinLines(std::vector<int> &labels, int dist) {
     // get the outline of palm area
-    int wid = grayImage.width;
-    int hei = grayImage.height; 
-    int scale = 3;
+    int wid = labelImage.width;
+    int hei = labelImage.height; 
     int combinedValue = labels.back();
 
-    for (int y = 0; y < hei; y+=scale) {
-        for (int x = 0; x < wid; x+=scale) {
-            int v = 0;   
-            for(int xx = x; xx < x+scale; xx++) {
-                for (int yy = y; yy < y+scale; yy++) {
-                    if ( binImage.data[yy][xx] > 0 && binImage.data[yy][xx] != combinedValue ) {
-                        v = binImage.data[yy][xx];
-                    } else if ( binImage.data[yy][xx] == combinedValue && v != 0) {
+    for (int y = 0; y < hei; y+=dist) {
+        for (int x = 0; x < wid; x+=dist) {
+            int cv = 0;   
+            int v = 0;
+            for(int xx = x; xx < x+dist; xx++) {
+                for (int yy = y; yy < y+dist; yy++) {
+                    if ( labelImage.data[yy][xx] > 0 && labelImage.data[yy][xx] != combinedValue ) {
+                        v = labelImage.data[yy][xx];
+                    } else if ( labelImage.data[yy][xx] == combinedValue ) {
+                        cv = combinedValue;
+                    }
+                    if ( v != 0 && cv != 0) {
                         combinedValue = v;
                         goto done;
                     }
@@ -202,40 +326,97 @@ static void CombinLines(std::vector<int> &labels) {
 done:
 
     if ( combinedValue == labels.back() ) {
+        for (int y = 0; y < hei; y++) {
+            for(int x = 0; x < wid; x++) {
+                if ( labelImage.data[y][x] == labels.back() ) {
+                    labelImage.data[y][x] = 0; 
+                }
+            }
+        }
         labels.pop_back();                      //just ignor this line
     } else {
         for (int y = 0; y < hei; y++) {
-            for (int x = 0; x < wid/scale; x++) {
-                if ( binImage.data[y][x] == labels.back() )
-                    binImage.data[y][x] = combinedValue;
+            for (int x = 0; x < wid; x++) {
+                if ( labelImage.data[y][x] == labels.back() )
+                    labelImage.data[y][x] = combinedValue;
             }
         }
-
         labels.pop_back();                      //combin this line 
     }
 
 }
 
 int MarkLines(unsigned char *gray_frame) {
-    // copy data to local image struct
-    int wid = grayImage.width;
-    int hei = grayImage.height; 
+    
+    // copy data to local image struct and get left or right info 
+    int wid = labelImage.width;
+    int hei = labelImage.height;     
+    int outlinelx = wid;
+    int outlinerx = 0;
+    int outlinety = hei;
+    int outlinedy = 0;
    
     std::vector< std::pair<int,int> > currentMargin; 
     std::pair<int,int> pos;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
-            grayImage.data[y][x] = gray_frame[x+y*wid];
-            if ( gray_frame[x+y*wid] >= 128) {
-                binImage.data[y][x] = -1;
+            if ( gray_frame[x+y*wid] >= 160) {
+                labelImage.data[y][x] = -1;
                 pos.first = x;
                 pos.second = y;
                 currentMargin.push_back(pos);
             } else {
-                binImage.data[y][x] = 0;
+                labelImage.data[y][x] = 0;
             }
+
+            if ( gray_frame[x+y*wid] > 0) {
+                if ( x > outlinerx )
+                    outlinerx = x;
+                if ( x < outlinelx )
+                    outlinelx = x;
+                if ( y > outlinedy )
+                    outlinedy = y;
+                if ( y < outlinety )
+                    outlinety = y;
+            }   
         }   
     } 
+
+    // get the left or right
+    int leftUpSum = 0;
+    int leftDownSum = 0;
+    int rightUpSum = 0;
+    int rightDownSum = 0;
+    int leftOrRight = -1;
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {            
+            if ( gray_frame[x+y*wid]  > 128 ) {     
+                int mapy = x;
+                int mapx = hei - y;           
+                if ( mapx > (outlinety + outlinedy)/2 ) {                    
+                    if ( mapy > (outlinelx + outlinerx)/2 ) {
+                        rightDownSum ++;
+                    } else {
+                        rightUpSum ++;
+                    }
+                } else {
+                    if ( mapy > (outlinelx + outlinerx)/2 ) {
+                        leftDownSum ++;
+                    } else {
+                        leftUpSum ++;
+                    }
+                }
+            }
+        }
+    }
+
+    if ( leftUpSum == 0 || leftDownSum == 0 || rightUpSum == 0 || rightDownSum == 0)
+        return -1;
+
+    if ( rightDownSum > leftDownSum )
+        leftOrRight = 2;
+    else
+        leftOrRight = 1;
 
     // diffusing image from high value
     std::vector< std::pair<int,int> > newMargin;
@@ -249,11 +430,16 @@ int MarkLines(unsigned char *gray_frame) {
             bool found = false;
             for(int yy = y - 1; yy <= y + 1; yy++){
                 for( int xx = x - 1; xx <= x + 1; xx++){
-                    if ( grayImage.data[yy][xx] >= 64 && binImage.data[yy][xx] == 0) {
+                    if ( gray_frame[xx+yy*wid] >= 96 && labelImage.data[yy][xx] == 0) {
                         found = true;
+                        pos.first = xx;
+                        pos.second = yy;
+                        newMargin.push_back(pos);
+                        labelImage.data[yy][xx] = -1;
                     }
                 }
             }
+            /*
             if ( found) {
                 int d = 1;
                 for(int yy = y - d; yy <= y + d; yy++){
@@ -261,30 +447,32 @@ int MarkLines(unsigned char *gray_frame) {
                         pos.first = xx;
                         pos.second = yy;
                         newMargin.push_back(pos);
-                        binImage.data[yy][xx] = -1;
+                        labelImage.data[yy][xx] = -1;
                     }
                 }
             }
+            */
         }
         currentMargin = newMargin;
     }
 
     // remain top four longest lines
     std::vector<int> labels;
-    BwLabel(binImage, labels, 4); 
+    BwLabel(labelImage, labels, 16); 
     
     // try combing the candidated lines
-    if ( labels.size() == 4) {
-        CombinLines(labels);
+    while ( labels.size() > 3) {
+        CombinLines(labels, 8);
     }
+
     
     // classify the lines based on the position
-    ClassifyLines(gray_frame,labels);
+    ClassifyLines(labels, leftOrRight);
 
 #if 1
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
-            gray_frame[x+y*wid] = -1 * binImage.data[y][x];
+            gray_frame[x+y*wid] = labelImage.data[y][x];
         }
     } 
 #endif
