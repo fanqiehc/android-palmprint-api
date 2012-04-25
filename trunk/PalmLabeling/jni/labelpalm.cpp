@@ -16,10 +16,10 @@ void PrepareLabelPalm(int wid, int hei) {
 
 int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei, int scale) {
     // central area define. 
-    int ltx = wid*2/5;
-    int lty = hei/4;
-    int rbx = wid*2/5 + wid*2/5;
-    int rby = hei/4 + hei/2;
+    int ltx = wid/3;
+    int lty = hei/5;
+    int rbx = wid/3 + wid/2;
+    int rby = hei/5 + hei*3/5;
    
     int centralArea = 0;
 
@@ -83,9 +83,9 @@ int LabelCentralArea(unsigned char *nv21_frame, int wid, int hei, int scale) {
             float diffLuma = abs(*luma - lumaMean);
             float diffCr = abs(*cr - crMean);
             float diffCb = abs(*cb - cbMean);
-            if ( diffLuma < 4 * lumaSigma
-                    && diffCr < 4 * crSigma
-                    && diffCb < 4 * cbSigma ) {
+            if ( diffLuma < 5 * lumaSigma
+                    && diffCr < 5 * crSigma
+                    && diffCb < 5 * cbSigma ) {
                 binImage.data[y/scale][x/scale] = 1;
                 centralArea ++;
             }

@@ -433,7 +433,7 @@ int MarkLines(unsigned char *gray_frame) {
             
             for(int yy = y - 1; yy <= y + 1; yy++){
                 for( int xx = x - 1; xx <= x + 1; xx++){
-                    if ( gray_frame[xx+yy*wid] >= 96 && labelImage.data[yy][xx] == 0) {
+                    if ( gray_frame[xx+yy*wid] >= 48 && labelImage.data[yy][xx] == 0) {
                         pos.first = xx;
                         pos.second = yy;
                         newMargin.push_back(pos);
@@ -449,10 +449,9 @@ int MarkLines(unsigned char *gray_frame) {
     std::vector<int> labels;
     BwLabel(labelImage, labels, 16); 
  
-   
     // try combing the candidated lines
     while ( labels.size() > 3) {
-        CombinLines(labels, 3);
+        CombinLines(labels, 4);
     }
 
     for (int y = 0; y < hei; y++) {

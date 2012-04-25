@@ -40,11 +40,11 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
     int wid = picWid / labelScale;
     int hei = picHei / labelScale;
      // marker the central area.
-    int ltx = wid*2/5;
-    int lty = hei/4;
-    int rbx = wid*2/5 + wid*2/5;
-    int rby = hei/4 + hei/2;
-
+    int ltx = wid/3;
+    int lty = hei/5;
+    int rbx = wid/3 + wid/2;
+    int rby = hei/5 + hei*3/5;
+ 
 	if ((AndroidBitmap_getInfo(env, bmp, &info)) < 0) {  
     	goto release;
     } 
