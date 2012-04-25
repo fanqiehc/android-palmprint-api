@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <android/log.h>
 #include <android/bitmap.h>
+#include "image.h"
 #include "palmapi.h"
 
 #define  LOG_TAG    "TEAONLY"
@@ -115,20 +116,38 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jby
     jbyte* mapPtr = env->GetByteArrayElements(map, &b);
     jbyte* framePtr = env->GetByteArrayElements(frame, &b);
 
-    EnhencePalm((unsigned char *)mapPtr, (unsigned char *)framePtr, labelScale);
-    MarkLines((unsigned char *)framePtr);
-
     // convert result to bitmap
 	AndroidBitmapInfo  info;
 	unsigned int *pixels;
- 
+    int uv_begin = picWid * picHei;
+
 	if ((AndroidBitmap_getInfo(env, bmp, &info)) < 0) {  
     	goto release;
     } 
     if ((AndroidBitmap_lockPixels(env, bmp, (void **)&pixels)) < 0) { 
         goto release;
     }
-    
+#if 1
+    for (int i = 0; i < (int)info.height; i++) {
+        for (int j = 0; j < (int)info.width; j++) {
+            int x = (int)(1.0 * i / info.height * picWid);
+            int y = (int)(1.0 * (info.width - 1 - j) / info.width * picHei);
+            unsigned char luma = framePtr[x+y*picWid];
+            unsigned char cr = framePtr[uv_begin + (y>>1)*picWid + ((x>>1)<<1)];
+            unsigned char cb = framePtr[uv_begin + (y>>1)*picWid + ((x>>1)<<1) + 1];
+            unsigned int* rgba = pixels + j + i*info.stride/4;
+            unsigned char r,g,b;
+            
+            yuv2rgb(luma, cr, cb, &r, &g, &b);
+             
+            *rgba = 0xFF000000 + (r<<16) + (g<<8) + b;
+        }
+    }
+#endif
+
+    EnhencePalm((unsigned char *)mapPtr, (unsigned char *)framePtr, labelScale);
+    MarkLines((unsigned char *)framePtr);
+
     for (int i = 0; i < (int)info.height; i++) {
         for (int j = 0; j < (int)info.width; j++) {
             int x = (int)(1.0 * i / info.height * picWid);
