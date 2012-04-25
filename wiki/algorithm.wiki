@@ -1,13 +1,10 @@
 # the algorithm document
 
-= Prepossessing =
+= Palm area labeling =
 
+  The palm area labeling is based on the normal gray image segment. 
+# compute the luma distribution of a rectangle area; 
+# mark the whole area of same distribution with 5*sigma; 
+# sharp the whole area with a fixed edge distance.
 
-
-
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+  The labeled palm area will be showed overlapped on raw images likes:
