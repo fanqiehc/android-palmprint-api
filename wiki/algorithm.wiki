@@ -1,10 +1,8 @@
-# the algorithm document
-
 = Palm area labeling =
 
   The palm area labeling is based on the normal gray image segment. 
-# compute the luma distribution of a rectangle area; 
-# mark the whole area of same distribution with 5*sigma; 
-# sharp the whole area with a fixed edge distance.
+ # compute the luma distribution of a rectangle area; 
+ # mark the whole area of same distribution with 5*sigma; 
+ # sharp the whole area with a fixed edge distance.
 
   The labeled palm area will be showed overlapped on raw images likes:
