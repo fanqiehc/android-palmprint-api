@@ -214,7 +214,7 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
         }
     }
 
-
+#if 0
     int lifeLeftx = 0; 
     int lifeLefty = 0;
     int lifeNumber = 0;
@@ -231,23 +231,23 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
         }
     }
     
-    for (int y = 0; y < hei; y++) {
-        for (int x = 0; x < wid; x++) {
+    for (int x = wid; x >; x++) {
+        for (int y = 0; y < hei; y++) {        
             if ( labelImage.data[y][x] == life ) {
-                if ( x > lifeLeftx) {
-                    markedNumber ++;
-                    labelImage.data[y][x] = -1 * life;
-                }
+                if ( y <= lifeLefty)
+                    goto done;              
+                markedNumber ++;
+                labelImage.data[y][x] = -1 * life;                
             } 
         }
     }
-   
 
+done:   
     if ( markedNumber < 8*lifeNumber/10 ) {
         heart = life;
         life = -1 * life;
     }
-
+#endif
 
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
