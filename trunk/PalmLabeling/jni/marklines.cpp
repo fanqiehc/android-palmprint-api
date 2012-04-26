@@ -214,64 +214,40 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
         }
     }
 
-#if 0
+
     int lifeLeftx = 0; 
     int lifeLefty = 0;
     int lifeNumber = 0;
+    int markedNumber = 0;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
             if ( labelImage.data[y][x] == life ) {
-                if ( y > lifeLefty){
+                lifeNumber ++;
+                if ( y > lifeLefty) {
                     lifeLeftx = x;
                     lifeLefty = y;
-                    lifeNumber ++;
+                }
+            } 
+        }
+    }
+    
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            if ( labelImage.data[y][x] == life ) {
+                if ( x > lifeLeftx) {
+                    markedNumber ++;
+                    labelImage.data[y][x] = -1 * life;
                 }
             } 
         }
     }
    
-    std::vector< std::pair<int,int> > currentMargin;
-    std::vector< std::pair<int,int> > newMargin;
-    std::pair<int,int> pos;
-    
-    int markedLifeNumber = 0;
-    labelImage.data[lifeRighty][lifeRightx] = -1 * life;
-    pos.first = lifeRightx;
-    pos.second = lifeRighty;
-    currentMargin.push_back(pos);
 
-    while( currentMargin.size() > 0) {
-        newMargin.clear();
-
-        if ( currentMargin[0].second <= lifeLefty )
-            break;            
-
-        for(int i = 0; i < (int)currentMargin.size(); i++) {
-            int x = currentMargin[i].first;
-            int y = currentMargin[i].second;
-
-            for(int yy = y - 1; yy <= y + 1; yy++){
-                for( int xx = x - 1; xx <= x + 1; xx++){
-                    if ( labelImage.data[yy][xx] == life ) {
-                        labelImage.data[yy][xx] = -1 * life;
-                        pos.first = xx;
-                        pos.second = yy;
-                        newMargin.push_back(pos);
-                        markedLifeNumber ++;
-                    }
-                }
-            }
-        }
-
-        currentMargin = newMargin;
-    }
-
-    life = -1 * life;    
-
-    if ( markedLifeNumber * 10 / lifeNumber < 8) {
+    if ( markedNumber < 8*lifeNumber/10 ) {
         heart = life;
+        life = -1 * life;
     }
-#endif 
+
 
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
@@ -281,6 +257,8 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
                 labelImage.data[y][x] = 2;
             else if ( labelImage.data[y][x] == header)
                 labelImage.data[y][x] = 3;
+            else if ( life > 0 && labelImage.data[y][x] == -1*life)
+                labelImage.data[y][x] = 1;
             else
                 labelImage.data[y][x] = 0;
         }
@@ -299,6 +277,7 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
 
     return 1;
 }    
+
 #endif
 
 
