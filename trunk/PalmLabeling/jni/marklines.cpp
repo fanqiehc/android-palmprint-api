@@ -435,7 +435,7 @@ int MarkLines(unsigned char *gray_frame) {
             
             for(int yy = y - 1; yy <= y + 1; yy++){
                 for( int xx = x - 1; xx <= x + 1; xx++){
-                    if ( gray_frame[xx+yy*wid] >= 48 && labelImage.data[yy][xx] == 0) {
+                    if ( gray_frame[xx+yy*wid] >= 64 && labelImage.data[yy][xx] == 0) {
                         pos.first = xx;
                         pos.second = yy;
                         newMargin.push_back(pos);
@@ -453,7 +453,7 @@ int MarkLines(unsigned char *gray_frame) {
  
     // try combing the candidated lines
     while ( labels.size() > 3) {
-        CombinLines(labels, 4);
+        CombinLines(labels, 3);
     }
 
     for (int y = 0; y < hei; y++) {
@@ -468,7 +468,7 @@ int MarkLines(unsigned char *gray_frame) {
     } 
  
     // classify the lines based on the position
-    ClassifyLines(labels, leftOrRight, 4);
+    ClassifyLines(labels, leftOrRight, 3);
 
 #if 1
     for (int y = 0; y < hei; y++) {
