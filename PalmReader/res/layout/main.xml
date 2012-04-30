@@ -27,6 +27,41 @@
             android:layout_height="wrap_content" 
             android:src="@drawable/help" 
             android:scaleType="fitXY" />
+            
+        <LinearLayout
+            android:layout_height="wrap_content" 
+            android:layout_width="wrap_content"
+            android:layout_gravity="center" 
+            android:gravity="center" 
+            android:id="@+id/form_action" 
+            android:background="#80FFFFFF"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/tv_message" 
+                android:layout_width="256dip" 
+                android:layout_height="wrap_content"
+                android:gravity="left|center" 
+                android:layout_margin = "3dip"
+                android:textSize="12dip"
+                android:textColor="#80000000"
+                android:visibility="gone"
+                android:text="The lines is not clear,\n touch screen to try again!" />
+            <Button 
+                android:id="@+id/btn_next" 
+                android:layout_height="wrap_content"
+                android:layout_width="128dip"
+                android:layout_margin = "3dip"
+                android:textSize="12dip"
+                android:shadowColor="#FFFFFFFF"
+                android:singleLine="true"
+                android:shadowDx="0"
+                android:shadowDy="2"
+                android:shadowRadius="1"
+                android:textStyle="bold"            
+                android:visibility="gone"
+                android:text="See result"/>
+       </LinearLayout>
+
     </FrameLayout>    
    
 </FrameLayout>

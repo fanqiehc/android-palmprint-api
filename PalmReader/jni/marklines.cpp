@@ -213,7 +213,7 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight, int d) {
             break;
         }
     }
-
+#if 0
     int lifeLeftx = 0; 
     int lifeLefty = 0;
     int lifeNumber = 0;
@@ -271,6 +271,7 @@ done:
         heart = life;
         life = -1 * life; 
     }
+#endif
 
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
@@ -366,7 +367,7 @@ int MarkLines(unsigned char *gray_frame) {
     std::pair<int,int> pos;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
-            if ( gray_frame[x+y*wid] >= 160) {
+            if ( gray_frame[x+y*wid] >= 128) {
                 labelImage.data[y][x] = -1;
                 pos.first = x;
                 pos.second = y;
@@ -416,7 +417,7 @@ int MarkLines(unsigned char *gray_frame) {
         }
     }
 
-    if ( leftUpSum == 0 || leftDownSum == 0 || rightUpSum == 0 || rightDownSum == 0)
+    if ( leftUpSum <= 32 || leftDownSum <= 32 || rightUpSum <= 32 || rightDownSum <= 32)
         return -1;
 
     if ( rightDownSum > leftDownSum )
@@ -435,7 +436,7 @@ int MarkLines(unsigned char *gray_frame) {
             
             for(int yy = y - 1; yy <= y + 1; yy++){
                 for( int xx = x - 1; xx <= x + 1; xx++){
-                    if ( gray_frame[xx+yy*wid] >= 64 && labelImage.data[yy][xx] == 0) {
+                    if ( gray_frame[xx+yy*wid] >= 96 && labelImage.data[yy][xx] == 0) {
                         pos.first = xx;
                         pos.second = yy;
                         newMargin.push_back(pos);
@@ -449,11 +450,11 @@ int MarkLines(unsigned char *gray_frame) {
 
     // remain top four longest lines
     std::vector<int> labels;
-    BwLabel(labelImage, labels, 16); 
+    BwLabel(labelImage, labels, 24); 
  
     // try combing the candidated lines
     while ( labels.size() > 3) {
-        CombinLines(labels, 3);
+        CombinLines(labels, 4);
     }
 
     for (int y = 0; y < hei; y++) {
@@ -468,15 +469,16 @@ int MarkLines(unsigned char *gray_frame) {
     } 
  
     // classify the lines based on the position
-    ClassifyLines(labels, leftOrRight, 3);
+    int ret = ClassifyLines(labels, leftOrRight, 5);
 
-#if 1
-    for (int y = 0; y < hei; y++) {
-        for (int x = 0; x < wid; x++) {
-            gray_frame[x+y*wid] = labelImage.data[y][x];
+    if ( ret > 0) {
+        for (int y = 0; y < hei; y++) {
+            for (int x = 0; x < wid; x++) {
+                gray_frame[x+y*wid] = labelImage.data[y][x];
+            }
         }
-    } 
-#endif
- 
-    return 0;
+        return 1; 
+    }
+    
+    return -1;
 }
