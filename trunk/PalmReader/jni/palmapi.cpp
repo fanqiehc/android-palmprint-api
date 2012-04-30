@@ -14,7 +14,7 @@ static int picWid, picHei, labelScale;
 extern "C" {
     JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint picWid, jint picHei, jint scale);
     JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jbyteArray dst, jobject bmp);
-    JNIEXPORT void JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jbyteArray map, jbyteArray frame, jobject bmp);
+    JNIEXPORT int JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jbyteArray map, jbyteArray frame, jobject bmp);
 };
 
 JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint wid, jint hei, jint scale) {
@@ -110,8 +110,9 @@ release:
 
 }
 
-JNIEXPORT void JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jbyteArray map, jbyteArray frame, jobject bmp) {
-     jboolean b;    
+JNIEXPORT int JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jbyteArray map, jbyteArray frame, jobject bmp) {
+    jboolean b;    
+    int ret = -1;
 
     jbyte* mapPtr = env->GetByteArrayElements(map, &b);
     jbyte* framePtr = env->GetByteArrayElements(frame, &b);
@@ -146,7 +147,7 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jby
 #endif
 
     EnhencePalm((unsigned char *)mapPtr, (unsigned char *)framePtr, labelScale);
-    MarkLines((unsigned char *)framePtr);
+    ret = MarkLines((unsigned char *)framePtr);
 
     for (int i = 0; i < (int)info.height; i++) {
         for (int j = 0; j < (int)info.width; j++) {
@@ -154,13 +155,18 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jby
             int y = (int)(1.0 * (info.width - 1 - j) / info.width * picHei);
             unsigned char g = framePtr[x+y*picWid];
             unsigned int* rgba = pixels + j + i*info.stride/4;
-            
-            if ( g == 1) {
-                *rgba = 0xFFFF0000;
-            } else if (g==2) {
-                *rgba = 0xFF00FF00;
-            } else if (g==3) {
-                *rgba = 0xFF0000FF;
+            if ( ret > 0) { 
+                if ( g == 1) {
+                    *rgba = 0xFFFF0000;
+                } else if (g==2) {
+                    *rgba = 0xFF00FF00;
+                } else if (g==3) {
+                    *rgba = 0xFF0000FF;
+                }
+            } else {
+                if ( g > 0) {
+                    *rgba = 0xFF000000 + (g<<16) + (g<<8) + g;
+                }
             }
         }
     }
@@ -170,4 +176,6 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jby
 release:    
 	env->ReleaseByteArrayElements(frame, framePtr, 0);   
 	env->ReleaseByteArrayElements(map, mapPtr, 0);   
+
+    return ret;
 }

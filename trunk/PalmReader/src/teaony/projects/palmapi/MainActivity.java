@@ -27,6 +27,8 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.SurfaceView;
 import android.util.Log;
+import android.widget.Button;
+import android.widget.TextView;
 
 public class MainActivity extends Activity 
     implements View.OnTouchListener, CameraView.CameraReadyCallback, OverlayView.UpdateDoneCallback{
@@ -37,6 +39,8 @@ public class MainActivity extends Activity
     private CameraView cameraView_;
     private OverlayView overlayView_;
     private ProgressDialog processDialog = null;
+    private Button btnNext;
+    private TextView tvMsg;
 
     private AppState state_ = AppState.INITED;
 
@@ -67,6 +71,9 @@ public class MainActivity extends Activity
         overlayView_ = (OverlayView)findViewById(R.id.surface_overlay);
         overlayView_.setOnTouchListener(this);
         overlayView_.setUpdateDoneCallback(this);
+    
+        btnNext = (Button)findViewById(R.id.btn_next);
+        tvMsg = (TextView)findViewById(R.id.tv_message);
     }
     
     @Override
@@ -123,6 +130,8 @@ public class MainActivity extends Activity
             procThread_ = new ProcThread();
             procThread_.start();
         } else if ( state_ == AppState.DISPLAY_SHOW){
+            tvMsg.setVisibility(View.GONE);
+            btnNext.setVisibility(View.GONE);
             state_ = AppState.LABELING;
             cameraView_.SetPreview(previewCb_);
             cameraView_.StartPreview();
@@ -183,7 +192,7 @@ public class MainActivity extends Activity
         @Override
         public void run() {           
             resultBMP_.eraseColor(Color.TRANSPARENT);
-            NativeAPI.nativeReadingPalm(labelFrame_, rawFrame_, resultBMP_); 
+            final int ret = NativeAPI.nativeReadingPalm(labelFrame_, rawFrame_, resultBMP_); 
             overlayView_.DrawResult( resultBMP_ );
             new Handler(Looper.getMainLooper()).post(new Runnable(){
                 public void run() { 
@@ -192,8 +201,17 @@ public class MainActivity extends Activity
                         processDialog = null;   
                         state_ = AppState.DISPLAY_SHOW;
                     } 
+                    if ( ret > 0) {
+                        tvMsg.setText("If lines is detected ok, press bellow button to see the result!\n If lines is not exacted with yours, touch screen to try again!");
+                        btnNext.setVisibility(View.VISIBLE);         
+                        tvMsg.setVisibility(View.VISIBLE);
+                    } else {
+                        tvMsg.setText("If lines is detected error, touch screen to try again!");
+                        tvMsg.setVisibility(View.VISIBLE);
+                    }
                 }   
-            });     
+            });
+
         }
     }
 
