@@ -160,7 +160,7 @@ float linearDistance(const std::vector< std::pair<int,int> > &line, float a, flo
     return sum;
 }
 
-int knearest(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
+int kmean(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
              std::vector< std::vector<int> > &linesLabel, std::vector< std::pair<float, float> > &linesParameter ) {
 
     std::vector< std::vector<int> > newLabel;    
@@ -235,7 +235,7 @@ int ClassifyLines( std::vector<int> &labels ) {
             targetLines[newLabel].push_back ( point);
         }   
     } 
-    
+   
     // building pass classify.
     std::vector< std::vector<int> > linesLabel;
     std::vector< std::pair<float, float> > linesParameter;  
@@ -248,20 +248,29 @@ int ClassifyLines( std::vector<int> &labels ) {
         linesLabel.push_back(emptyLabel);
     }    
     std::vector<int> group;
-    group.push_back( labels[0]);
+    group.push_back( 0 );
     std::pair<float,float> lp = getLinesParameter(targetLines, group);
     linesParameter[0] = lp;
     for(int i = 1; i < K; i++) {
-        group[0] = labels[i];
+        group[0] = i;
         lp = getLinesParameter(targetLines, group);
         linesParameter[i] = lp;
     }
-
-    for(int i = 0; i < 10; i++) {
-        if ( knearest(targetLines, linesLabel,  linesParameter) > 0) {
+    
+    for(int i = 0; i < 10; i++) { 
+        if ( kmean(targetLines, linesLabel,  linesParameter) > 0) {
             break;
         }
+
+        LOGD("-------------------------------------");
+        for(unsigned int n = 0; n < linesLabel.size(); n++) {
+            LOGD(">>>>>>>>>>>>>>>>>>>>>>>%d", n);
+            for(unsigned int j = 0; j < linesLabel[n].size(); j++)
+                LOGD("%d,", linesLabel[n][j] );
+        }
     }
+
+    // OK, we got 3 lines now.
 
 
     return 0;
@@ -367,16 +376,18 @@ int MarkLines(unsigned char *gray_frame) {
 
     // remain top longest lines
     std::vector<int> labels;
-    BwLabel(labelImage, labels, 24); 
+    BwLabel(labelImage, labels, 12); 
  
     int ret = ClassifyLines(labels);
-    if ( ret > 0) {
+    
+    if ( ret == 0) {
         for (int y = 0; y < hei; y++) {
             for (int x = 0; x < wid; x++) {
                 gray_frame[x+y*wid] = labelImage.data[y][x];
             }
         }
-        return 1; 
+        return -1; 
     }
+
     return ret;
 }
