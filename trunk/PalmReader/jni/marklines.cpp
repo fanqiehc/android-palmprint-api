@@ -109,247 +109,128 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
     } 
 }
 
-#if 0
-static void ClassifyLines(std::vector<int> &labels, int leftOrRight) {
-    // get the outline of palm area
+/*******************************************************
+ y = a0 + a1 * x;
+ a1 = (n*sum(x*y) - sum(x) * sum (y)) / (n*sum(x^2) - sum(x)^2)
+ a0 = sum(y)/n - a1 * sum(x)/n
+
+ *******************************************************/
+std::pair<float,float> getLinesParameter(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
+                                         std::vector<int> &group) {
+    float sum_x = 0.0;
+    float sum_y = 0.0;
+    float sum_xy = 0.0;
+    float sum_xx = 0.0;
+    float sum_yy = 0.0;
+    int num = 0;
+
+    for(unsigned int n = 0; n < group.size(); n++) {
+        for (unsigned int i = 0; i < targetLines[ group[n]].size() ; i++) {
+            int x = targetLines[ group[n]][i].first;
+            int y = targetLines[ group[n]][i].second;
+            num ++;
+            sum_x += x;
+            sum_y += y;
+            sum_xy += x * y;
+            sum_xx += x * x;
+            sum_yy += y * y;             
+        } 
+    }
+
+    std::pair<int,int> ret;
+    ret.first = ( num * sum_xy - sum_x * sum_y) / ( num * sum_xx - sum_x * sum_x) ;
+    ret.second = sum_y/num - ret.first * sum_x / num;
+
+    return ret;
+}
+
+float linearDistance(const std::vector< std::pair<int,int> > &line, float a, float b) {
+
+    return 0.0;
+}
+
+int knearest(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
+             std::vector< std::vector<int> > &linesLabel, std::vector< std::pair<float, float> > &linesParameter ) {
+
+    std::vector< std::vector<int> > newLabel;    
+    for(unsigned int i = 0; i <  linesParameter.size(); i++) {          
+        std::vector<int> emptyLabel;    
+        newLabel.push_back(emptyLabel);
+    }    
+
+    for(unsigned int i = 0; i < targetLines.size(); i++) {
+        float minDist = -1;
+        int minLabel = -1;
+        for (unsigned int n = 0; n < linesParameter.size(); n++) {
+            float dist = linearDistance( targetLines[i], linesParameter[n].first, linesParameter[n].first);
+            if ( dist < minDist && minDist < 0) {
+                minDist = dist;
+                minLabel = n;
+            }
+        }   
+        newLabel[minLabel].push_back(i);
+    }
+
+    // update paramter
+
+    return 0;
+
+}
+
+int ClassifyLines( std::vector<int> &labels ) {
+    int K = 3;    
+
+    if ( labels.size() <= (unsigned int)K)
+        return -1;
+    
+    // change to 2d array of label result.
+    std::map<int,int> labelmap;
+    std::vector< std::vector< std::pair<int,int> > > targetLines;
+    for(unsigned int i = 0; i < labels.size(); i++) {
+        std::vector< std::pair<int,int> > emptyLine;        
+        labelmap[ labels[i] ] = i;
+        targetLines.push_back ( emptyLine );        
+    }
     int wid = labelImage.width;
-    int hei = labelImage.height; 
-    int outlinelx = wid;
-    int outlinerx = 0;
-    int outlinety = hei;
-    int outlinedy = 0;
+    int hei = labelImage.height;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
-            if ( labelImage.data[y][x] > 0) {
-                if ( x > outlinerx )
-                    outlinerx = x;
-                if ( x < outlinelx )
-                    outlinelx = x;
-                if ( y > outlinedy )
-                    outlinedy = y;
-                if ( y < outlinety )
-                    outlinety = y;
-            }   
+            int newLabel = labelmap[ labelImage.data[y][x] ];
+            std::pair<int,int> point;
+            point.first = x;
+            point.second = y;
+            targetLines[newLabel].push_back ( point);
         }   
     } 
     
-    // try to find most life likes.
-    for(unsigned int n = 0; n < labels.size(); n++) {
-        int life = 0;
-        int header = 0;
-        int markv = 0;
-        for( int y = outlinety; y <= outlinedy; y++) {
-            for( int x = outlinelx; x <= outlinerx; x++) {
-                if ( labelImage.data[y][x] == labels[n] ) {
-                    float mapx = (x - outlinelx) * 1.0 / (outlinerx - outlinelx);
-                    float mapy = 1 - (y - outlinety) * 1.0 / (outlinedy - outlinety);
-                    if ( mapx > mapy)
-                        header++;
-                    else
-                        life++;
-                }
-            }
-        }      
-        
-        if ( header > 9*life ) {
-            markv = 1;
-        } else if ( life > 9*header) {
-            markv = 3;
-        } else {
-            markv = 2;
-        }
-
-        for( int y = outlinety; y <= outlinedy; y++) {
-            for( int x = outlinelx; x <= outlinerx; x++) {
-                if ( labelImage.data[y][x] == labels[n] ) {
-                    labelImage.data[y][x] = markv;
-                }
-            }
-        }  
-    }
-}
-#else
-static int ClassifyLines(std::vector<int> &labels, int leftOrRight, int d) {
-    int wid = labelImage.width;
-    int hei = labelImage.height;
-
-    if ( leftOrRight == 2) {
-        for (int y = 0; y < hei>>1; y++) {
-            for (int x = 0; x < wid; x++) {
-                int yy = hei - 1 - y;
-                int temp = labelImage.data[yy][x];
-                labelImage.data[yy][x] = labelImage.data[y][x];
-                labelImage.data[y][x] = temp;
-            }
-        }    
+    // building pass classify.
+    std::vector< std::vector<int> > linesLabel;
+    std::vector< std::pair<float, float> > linesParameter;  
+    for(int i = 0; i < K ; i++) {  
+        std::pair<float, float> lp;  
+        std::vector<int> emptyLabel;    
+        lp.first = 0.0;
+        lp.second = 0.0; 
+        linesParameter.push_back(lp);
+        linesLabel.push_back(emptyLabel);
+    }    
+    std::vector<int> group;
+    group.push_back( labels[0]);
+    std::pair<float,float> lp = getLinesParameter(targetLines, group);
+    linesParameter[0] = lp;
+    for(int i = 1; i < K; i++) {
+        group[0] = labels[i];
+        lp = getLinesParameter(targetLines, group);
+        linesParameter[i] = lp;
     }
 
-    // find the head and life
-    int headTopx = 0, headTopy = hei;
-    int lifeRightx = 0, lifeRighty = 0;
-    for (int y = 0; y < hei; y++) {
-        for (int x = 0; x < wid; x++) {
-            if ( labelImage.data[y][x] > 0 ) {
-                if ( y < headTopy) {
-                    headTopx = x;
-                    headTopy = y;
-                }
-                if ( x > lifeRightx) {
-                    lifeRighty = y;
-                    lifeRightx = x;
-                }
-            } 
-        }
-    }
-    int header = labelImage.data[headTopy][headTopx];
-    int life = labelImage.data[lifeRighty][lifeRightx];
-    if ( header == life)      
-        return -1; 
-
-    int heart = -1;
-    for(int i = 0; i < (int)labels.size(); i++) {
-        if ( labels[i] != header && labels[i] != life) {
-            heart = labels[i];
+    for(int i = 0; i < 10; i++) {
+        if ( knearest(targetLines, linesLabel,  linesParameter) == 0) {
             break;
         }
     }
-#if 0
-    int lifeLeftx = 0; 
-    int lifeLefty = 0;
-    int lifeNumber = 0;
-    for (int y = 0; y < hei; y++) {
-        for (int x = 0; x < wid; x++) {
-            if ( labelImage.data[y][x] == life ) {
-                lifeNumber ++;
-                if ( y > lifeLefty){
-                    lifeLeftx = x;
-                    lifeLefty = y;                    
-                }
-            } 
-        }
-    }
 
-    std::vector< std::pair<int,int> > currentMargin;
-    std::vector< std::pair<int,int> > newMargin;
-    std::pair<int,int> pos;
-    
-    int markedLifeNumber = 0;
-    labelImage.data[lifeRighty][lifeRightx] = -1 * life;
-    pos.first = lifeRightx;
-    pos.second = lifeRighty;
-    currentMargin.push_back(pos);
-
-    while( currentMargin.size() > 0) {
-        newMargin.clear();
-       
-        for(int i = 0; i < (int)currentMargin.size(); i++) {
-            int x = currentMargin[i].first;
-            int y = currentMargin[i].second;
-
-            for(int yy = y - d; yy <= y + d; yy++){
-                for( int xx = x - d; xx <= x + d; xx++){
-                    if ( labelImage.data[yy][xx] == life && xx > lifeLeftx) {
-                        labelImage.data[yy][xx] = -1 * life;
-                        pos.first = xx;
-                        pos.second = yy;
-                        newMargin.push_back(pos);
-                        markedLifeNumber ++;
-                    } else {
-                        if ( labelImage.data[yy][xx] == life && xx <= lifeLeftx) {
-                            goto done;
-                        }
-                    }
-                }
-            }
-        }
-        currentMargin = newMargin;
-    }
-
-done:
-       
-    if ( markedLifeNumber * 10 / lifeNumber < 8) {
-        heart = life;
-        life = -1 * life; 
-    }
-#endif
-
-    for (int y = 0; y < hei; y++) {
-        for (int x = 0; x < wid; x++) {
-            if ( labelImage.data[y][x] == life)
-                labelImage.data[y][x] = 1;
-            else if ( labelImage.data[y][x] == heart)
-                labelImage.data[y][x] = 2;
-            else if ( labelImage.data[y][x] == header)
-                labelImage.data[y][x] = 3;
-            else if ( life > 0 && labelImage.data[y][x] == -1*life)
-                labelImage.data[y][x] = 1;
-            else
-                labelImage.data[y][x] = 0;
-        }
-    }
-
-    if ( leftOrRight == 2) {
-        for (int y = 0; y < hei>>1; y++) {
-            for (int x = 0; x < wid; x++) {
-                int yy = hei - 1 - y;
-                int temp = labelImage.data[yy][x];
-                labelImage.data[yy][x] = labelImage.data[y][x];
-                labelImage.data[y][x] = temp;
-            }
-        }    
-    }
-
-    return 1;
-}    
-
-#endif
-
-
-static void CombinLines(std::vector<int> &labels, int dist) {
-    // get the outline of palm area
-    int wid = labelImage.width;
-    int hei = labelImage.height; 
-    int combinedValue = labels.back();
-
-    for (int y = dist; y < hei-dist; y+=dist) {
-        for (int x = dist; x < wid-dist; x+=dist) {
-            int cv = 0;   
-            int v = 0;
-            for(int xx = x - dist; xx < x+dist; xx++) {
-                for (int yy = y - dist; yy < y+dist; yy++) {
-                    if ( labelImage.data[yy][xx] > 0 && labelImage.data[yy][xx] != combinedValue ) {
-                        v = labelImage.data[yy][xx];
-                    } else if ( labelImage.data[yy][xx] == combinedValue ) {
-                        cv = combinedValue;
-                    }
-                    if ( v != 0 && cv != 0) {
-                        combinedValue = v;
-                        goto done;
-                    }
-                }
-            }
-        }
-    }
-
-done:
-    if ( combinedValue == labels.back() ) {
-        for (int y = 0; y < hei; y++) {
-            for(int x = 0; x < wid; x++) {
-                if ( labelImage.data[y][x] == labels.back() ) {
-                    labelImage.data[y][x] = 0; 
-                }
-            }
-        }
-        labels.pop_back();                      //just ignor this line
-    } else {
-        for (int y = 0; y < hei; y++) {
-            for (int x = 0; x < wid; x++) {
-                if ( labelImage.data[y][x] == labels.back() )
-                    labelImage.data[y][x] = combinedValue;
-            }
-        }
-        labels.pop_back();                      //combin this line 
-    }
+    return 0;
 
 }
 
@@ -362,12 +243,15 @@ int MarkLines(unsigned char *gray_frame) {
     int outlinerx = 0;
     int outlinety = hei;
     int outlinedy = 0;
+
+    int maxValue = 160;
+    int minValue = 96;
    
     std::vector< std::pair<int,int> > currentMargin; 
     std::pair<int,int> pos;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
-            if ( gray_frame[x+y*wid] >= 128) {
+            if ( gray_frame[x+y*wid] >= maxValue) {
                 labelImage.data[y][x] = -1;
                 pos.first = x;
                 pos.second = y;
@@ -397,7 +281,7 @@ int MarkLines(unsigned char *gray_frame) {
     int leftOrRight = -1;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {            
-            if ( gray_frame[x+y*wid]  > 128 ) {     
+            if ( gray_frame[x+y*wid]  >= maxValue ) {     
                 int mapy = x;
                 int mapx = hei - y;           
                 if ( mapx > (outlinety + outlinedy)/2 ) {                    
@@ -436,7 +320,7 @@ int MarkLines(unsigned char *gray_frame) {
             
             for(int yy = y - 1; yy <= y + 1; yy++){
                 for( int xx = x - 1; xx <= x + 1; xx++){
-                    if ( gray_frame[xx+yy*wid] >= 96 && labelImage.data[yy][xx] == 0) {
+                    if ( gray_frame[xx+yy*wid] >= minValue && labelImage.data[yy][xx] == 0) {
                         pos.first = xx;
                         pos.second = yy;
                         newMargin.push_back(pos);
@@ -448,29 +332,11 @@ int MarkLines(unsigned char *gray_frame) {
         currentMargin = newMargin;
     }
 
-    // remain top four longest lines
+    // remain top longest lines
     std::vector<int> labels;
     BwLabel(labelImage, labels, 24); 
  
-    // try combing the candidated lines
-    while ( labels.size() > 3) {
-        CombinLines(labels, 4);
-    }
-
-    for (int y = 0; y < hei; y++) {
-        for (int x = 0; x < wid; x++) {
-            if ( labelImage.data[y][x] > 0) {
-                if ( std::find(labels.begin(), labels.end(), labelImage.data[y][x])
-                        == labels.end() ) {
-                    LOGD("CombinLines is Error!!!!!!!");
-                }
-            }
-        }
-    } 
- 
-    // classify the lines based on the position
-    int ret = ClassifyLines(labels, leftOrRight, 5);
-
+    int ret = ClassifyLines(labels);
     if ( ret > 0) {
         for (int y = 0; y < hei; y++) {
             for (int x = 0; x < wid; x++) {
@@ -479,6 +345,5 @@ int MarkLines(unsigned char *gray_frame) {
         }
         return 1; 
     }
-    
-    return -1;
+    return ret;
 }
