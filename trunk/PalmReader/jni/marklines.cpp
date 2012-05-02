@@ -144,9 +144,20 @@ std::pair<float,float> getLinesParameter(const std::vector< std::vector< std::pa
     return ret;
 }
 
-float linearDistance(const std::vector< std::pair<int,int> > &line, float a, float b) {
+/*******************************************************
+ y = a * x + b;
+ distance = abs( -a * x + y - b) / sqrt(a*a + 1);
+ *******************************************************/
 
-    return 0.0;
+float linearDistance(const std::vector< std::pair<int,int> > &line, float a, float b) {
+    float sum = 0;
+    for(unsigned int i = 0; i < line.size(); i++) {
+        float dist = abs( line[i].second - a * line[i].first - b);
+        dist = dist / sqrt( a*a  + 1);
+        sum += dist;
+    }
+
+    return sum;
 }
 
 int knearest(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
@@ -163,7 +174,7 @@ int knearest(const std::vector< std::vector< std::pair<int,int> > > &targetLines
         int minLabel = -1;
         for (unsigned int n = 0; n < linesParameter.size(); n++) {
             float dist = linearDistance( targetLines[i], linesParameter[n].first, linesParameter[n].first);
-            if ( dist < minDist && minDist < 0) {
+            if ( dist < minDist || minDist < 0) {
                 minDist = dist;
                 minLabel = n;
             }
@@ -171,10 +182,32 @@ int knearest(const std::vector< std::vector< std::pair<int,int> > > &targetLines
         newLabel[minLabel].push_back(i);
     }
 
-    // update paramter
+    // check is same with input classify ?
+    bool isSame = true;
+    for(unsigned int i = 0; i < linesParameter.size(); i++) {
+        if (linesLabel[i].size() != newLabel[i].size() ){
+            isSame = false;
+            break;
+        }
+        for(unsigned int n = 0; n < newLabel.size(); n++ ) {
+            if( linesLabel[i][n] != newLabel[i][n] ) {
+                isSame = false;
+                break;
+            }                
+        }
+    }
+    if ( isSame)
+        return 1;
 
-    return 0;
+    // update linesParameter 
+    linesLabel = newLabel;
+    for(unsigned int i = 0; i < linesParameter.size(); i++) {
+        std::pair<float,float> lp;
+        lp = getLinesParameter(targetLines, linesLabel[i]);
+        linesParameter[i] = lp;
+    }
 
+    return -1;
 }
 
 int ClassifyLines( std::vector<int> &labels ) {
@@ -225,13 +258,13 @@ int ClassifyLines( std::vector<int> &labels ) {
     }
 
     for(int i = 0; i < 10; i++) {
-        if ( knearest(targetLines, linesLabel,  linesParameter) == 0) {
+        if ( knearest(targetLines, linesLabel,  linesParameter) > 0) {
             break;
         }
     }
 
-    return 0;
 
+    return 0;
 }
 
 int MarkLines(unsigned char *gray_frame) {
