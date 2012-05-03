@@ -302,7 +302,7 @@ int MarkLines(unsigned char *gray_frame) {
     int outlinedy = 0;
 
     int maxValue = 160;
-    int minValue = 64;
+    int minValue = 96;
     int maxNumber = 8;
    
     std::vector< std::pair<int,int> > currentMargin; 

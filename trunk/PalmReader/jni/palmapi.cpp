@@ -31,9 +31,11 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
 
     jbyte* framePtr = env->GetByteArrayElements(src, &b);
     jbyte* destPtr = env->GetByteArrayElements(dst, &b);
-
+    
+    /*
     LabelCentralArea((unsigned char *)framePtr, picWid, picHei, labelScale);
     LabelPalmArea((unsigned char *)destPtr);
+    */
 
     // convert result to bitmap
 	AndroidBitmapInfo  info;
@@ -79,7 +81,17 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
         rgba = pixels + x + y*info.stride/4;
         *rgba = 0xFFFFFFFF;
     }
-
+     for(int i = 0; i < hei; i++) {
+    	for ( int j = 0; j < wid; j++) {
+            if ( i >= lty && i <= rby &&
+                 j >= ltx && j <= rbx)
+                destPtr[j+i*wid] = 1;    
+            else
+                destPtr[j+i*wid] = 0;
+        }
+     }
+    
+#if 0
     for(int i = 0; i < hei; i++) {
     	for ( int j = 0; j < wid; j++) {
             if ( destPtr[j+i*wid] == 1){
@@ -102,7 +114,8 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
                 destPtr[j+i*wid] = 0;            
         }	
     }
-    
+#endif
+
    AndroidBitmap_unlockPixels(env, bmp);
 release:    
 	env->ReleaseByteArrayElements(src, framePtr, 0);   
