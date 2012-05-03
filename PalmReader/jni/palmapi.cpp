@@ -46,23 +46,29 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
     if ((AndroidBitmap_lockPixels(env, bmp, (void **)&pixels)) < 0) { 
         return;
     }
- 
+
+    unsigned int markColor = 0xFF00FFFF; 
     for(int j = ltx; j <= rbx; j++) {
         int i = lty;
         int y = (int)(1.0 * info.height / wid * j);
         int x = (int)(1.0 * info.width / hei * (hei - i));
         unsigned int* rgba = pixels + x + y*info.stride/4;
-        *rgba = 0xFFFFFFFF;
+        *rgba = markColor;
         rgba = pixels + (x+1) + y*info.stride/4;
-        *rgba = 0xFFFFFFFF;
+        *rgba = markColor;
+        rgba = pixels + (x-1) + y*info.stride/4;
+        *rgba = markColor;
+
 
         i = rby;
         y = (int)(1.0 * info.height / wid * j);
         x = (int)(1.0 * info.width / hei * (hei - i));
         rgba = pixels + x + y*info.stride/4;
-        *rgba = 0xFFFFFFFF;
+        *rgba = markColor;
         rgba = pixels + (x+1) + y*info.stride/4;
-        *rgba = 0xFFFFFFFF;
+        *rgba = markColor;
+        rgba = pixels + (x-1) + y*info.stride/4;
+        *rgba = markColor;
     }
     
     for(int i = lty; i <= rby; i++) {
@@ -70,17 +76,21 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
         int y = (int)(1.0 * info.height / wid * j);
         int x = (int)(1.0 * info.width / hei * (hei - i));
         unsigned int* rgba = pixels + x + y*info.stride/4;
-        *rgba = 0xFFFFFFFF;
+        *rgba = markColor;
         rgba = pixels + x + (y+1)*info.stride/4;
-        *rgba = 0xFFFFFFFF;
+        *rgba = markColor;
+        rgba = pixels + x + (y-1)*info.stride/4;
+        *rgba = markColor;
 
         j = rbx;
         y = (int)(1.0 * info.height / wid * j);
         x = (int)(1.0 * info.width / hei * (hei - i));
         rgba = pixels + x + y*info.stride/4;
-        *rgba = 0xFFFFFFFF;
+        *rgba = markColor;
         rgba = pixels + x + (y+1)*info.stride/4;
-        *rgba = 0xFFFFFFFF;
+        *rgba = markColor;
+        rgba = pixels + x + (y-1)*info.stride/4;
+        *rgba = markColor;
     }
 
     jbyte* framePtr = env->GetByteArrayElements(src, &b);
