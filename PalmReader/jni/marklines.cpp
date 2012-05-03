@@ -18,6 +18,13 @@ void PrepareMarkLines(int wid, int hei) {
     labelImage.resize(wid, hei);
 }
 
+#if 0
+float finddet(float a1,float a2, float a3,float b1, float b2,float b3, float c1, float c2, float c3)
+{
+    return ((a1*b2*c3)-(a1*b3*c2)-(a2*b1*c3)+(a3*b1*c2)+(a2*b3*c1)-(a3*b2*c1)); /*expansion of a 3x3 determinant*/
+}
+#endif
+
 static int findRoot(std::vector<int> &links, int x) {
     if ( links[x] != x)
         return findRoot(links, links[x]);
@@ -219,7 +226,7 @@ done:
     return -1;
 }
 
-int ClassifyLines( std::vector<int> &labels ) {
+int GroupLines( std::vector<int> &labels ) {
     int K = 3;    
 
     if ( labels.size() <= (unsigned int)K)
@@ -279,24 +286,160 @@ int ClassifyLines( std::vector<int> &labels ) {
     return 0;
 #endif    
 
-    for(int i = 0; i < 10; i++) { 
+    for(int i = 0; i < 16; i++) { 
         if ( kmean(targetLines, linesLabel,  linesParameter) > 0) {
             break;
         }
     }
 
     // OK, we got 3 lines now.
+    labels.clear();
     for(unsigned int i = 0; i < linesLabel.size(); i++) {
         for ( unsigned int n = 0; n < linesLabel[i].size(); n++) {
             for( unsigned int j = 0; j < targetLines[ linesLabel[i][n]].size(); j++) {
                 int y = targetLines[ linesLabel[i][n]][j].second;
                 int x = targetLines[ linesLabel[i][n]][j].first;
-                labelImage.data[y][x] = i * 120 + 1;
+                labelImage.data[y][x] = i + 1;
             }
+        }
+        labels.push_back(i+1);
+    }
+    
+
+    return 0;
+}
+
+static int ClassifyLines(std::vector<int> &labels, int leftOrRight, int d) {
+    int wid = labelImage.width;
+    int hei = labelImage.height;
+
+    if ( leftOrRight == 2) {
+        for (int y = 0; y < hei>>1; y++) {
+            for (int x = 0; x < wid; x++) {
+                int yy = hei - 1 - y;
+                int temp = labelImage.data[yy][x];
+                labelImage.data[yy][x] = labelImage.data[y][x];
+                labelImage.data[y][x] = temp;
+            }
+        }    
+    }
+
+    // find the head and life
+    int headTopx = 0, headTopy = hei;
+    int lifeRightx = 0, lifeRighty = 0;
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            if ( labelImage.data[y][x] > 0 ) {
+                if ( y < headTopy) {
+                    headTopx = x;
+                    headTopy = y;
+                }
+                if ( x > lifeRightx) {
+                    lifeRighty = y;
+                    lifeRightx = x;
+                }
+            } 
+        }
+    }
+    int header = labelImage.data[headTopy][headTopx];
+    int life = labelImage.data[lifeRighty][lifeRightx];
+    if ( header == life)      
+        return -1; 
+
+    int heart = -1;
+    for(int i = 0; i < (int)labels.size(); i++) {
+        if ( labels[i] != header && labels[i] != life) {
+            heart = labels[i];
+            break;
+        }
+    }
+#if 0
+    int lifeLeftx = 0; 
+    int lifeLefty = 0;
+    int lifeNumber = 0;
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            if ( labelImage.data[y][x] == life ) {
+                lifeNumber ++;
+                if ( y > lifeLefty){
+                    lifeLeftx = x;
+                    lifeLefty = y;                    
+                }
+            } 
         }
     }
 
-    return 0;
+    std::vector< std::pair<int,int> > currentMargin;
+    std::vector< std::pair<int,int> > newMargin;
+    std::pair<int,int> pos;
+    
+    int markedLifeNumber = 0;
+    labelImage.data[lifeRighty][lifeRightx] = -1 * life;
+    pos.first = lifeRightx;
+    pos.second = lifeRighty;
+    currentMargin.push_back(pos);
+
+    while( currentMargin.size() > 0) {
+        newMargin.clear();
+       
+        for(int i = 0; i < (int)currentMargin.size(); i++) {
+            int x = currentMargin[i].first;
+            int y = currentMargin[i].second;
+
+            for(int yy = y - d; yy <= y + d; yy++){
+                for( int xx = x - d; xx <= x + d; xx++){
+                    if ( labelImage.data[yy][xx] == life && xx > lifeLeftx) {
+                        labelImage.data[yy][xx] = -1 * life;
+                        pos.first = xx;
+                        pos.second = yy;
+                        newMargin.push_back(pos);
+                        markedLifeNumber ++;
+                    } else {
+                        if ( labelImage.data[yy][xx] == life && xx <= lifeLeftx) {
+                            goto done;
+                        }
+                    }
+                }
+            }
+        }
+        currentMargin = newMargin;
+    }
+
+done:
+       
+    if ( markedLifeNumber * 10 / lifeNumber < 8) {
+        heart = life;
+        life = -1 * life; 
+    }
+#endif
+
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            if ( labelImage.data[y][x] == life)
+                labelImage.data[y][x] = 1;
+            else if ( labelImage.data[y][x] == heart)
+                labelImage.data[y][x] = 2;
+            else if ( labelImage.data[y][x] == header)
+                labelImage.data[y][x] = 3;
+            else if ( life > 0 && labelImage.data[y][x] == -1*life)
+                labelImage.data[y][x] = 1;
+            else
+                labelImage.data[y][x] = 0;
+        }
+    }
+
+    if ( leftOrRight == 2) {
+        for (int y = 0; y < hei>>1; y++) {
+            for (int x = 0; x < wid; x++) {
+                int yy = hei - 1 - y;
+                int temp = labelImage.data[yy][x];
+                labelImage.data[yy][x] = labelImage.data[y][x];
+                labelImage.data[y][x] = temp;
+            }
+        }    
+    }
+
+    return 1;
 }
 
 int MarkLines(unsigned char *gray_frame) {
@@ -417,17 +560,18 @@ int MarkLines(unsigned char *gray_frame) {
     labels.clear();
     BwLabel(labelImage, labels, -1); 
 #endif
+    GroupLines(labels);
 
-    int ret = ClassifyLines(labels);
+    int ret = ClassifyLines(labels, leftOrRight, 5);
 
-    if ( ret == 0) {
+    if ( ret > 0) {
         for (int y = 0; y < hei; y++) {
             for (int x = 0; x < wid; x++) {
                 gray_frame[x+y*wid] = labelImage.data[y][x];
             }
         }
-        return -1; 
+        return 1; 
     }
 
-    return 0;
+    return -1;
 }
