@@ -29,14 +29,6 @@ JNIEXPORT void JNICALL JNIDEFINE(nativePrepare)(JNIEnv* env, jclass clz, jint wi
 JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyteArray src, jbyteArray dst, jobject bmp) {
     jboolean b;    
 
-    jbyte* framePtr = env->GetByteArrayElements(src, &b);
-    jbyte* destPtr = env->GetByteArrayElements(dst, &b);
-    
-    /*
-    LabelCentralArea((unsigned char *)framePtr, picWid, picHei, labelScale);
-    LabelPalmArea((unsigned char *)destPtr);
-    */
-
     // convert result to bitmap
 	AndroidBitmapInfo  info;
 	unsigned int *pixels;
@@ -49,10 +41,10 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
     int rby = hei/5 + hei*3/5;
  
 	if ((AndroidBitmap_getInfo(env, bmp, &info)) < 0) {  
-    	goto release;
+        return;
     } 
     if ((AndroidBitmap_lockPixels(env, bmp, (void **)&pixels)) < 0) { 
-        goto release;
+        return;
     }
  
     for(int j = ltx; j <= rbx; j++) {
@@ -61,18 +53,25 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
         int x = (int)(1.0 * info.width / hei * (hei - i));
         unsigned int* rgba = pixels + x + y*info.stride/4;
         *rgba = 0xFFFFFFFF;
+        rgba = pixels + (x+1) + y*info.stride/4;
+        *rgba = 0xFFFFFFFF;
 
         i = rby;
         y = (int)(1.0 * info.height / wid * j);
         x = (int)(1.0 * info.width / hei * (hei - i));
         rgba = pixels + x + y*info.stride/4;
         *rgba = 0xFFFFFFFF;
+        rgba = pixels + (x+1) + y*info.stride/4;
+        *rgba = 0xFFFFFFFF;
     }
+    
     for(int i = lty; i <= rby; i++) {
         int j = ltx;
         int y = (int)(1.0 * info.height / wid * j);
         int x = (int)(1.0 * info.width / hei * (hei - i));
         unsigned int* rgba = pixels + x + y*info.stride/4;
+        *rgba = 0xFFFFFFFF;
+        rgba = pixels + x + (y+1)*info.stride/4;
         *rgba = 0xFFFFFFFF;
 
         j = rbx;
@@ -80,18 +79,16 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
         x = (int)(1.0 * info.width / hei * (hei - i));
         rgba = pixels + x + y*info.stride/4;
         *rgba = 0xFFFFFFFF;
+        rgba = pixels + x + (y+1)*info.stride/4;
+        *rgba = 0xFFFFFFFF;
     }
-     for(int i = 0; i < hei; i++) {
-    	for ( int j = 0; j < wid; j++) {
-            if ( i >= lty && i <= rby &&
-                 j >= ltx && j <= rbx)
-                destPtr[j+i*wid] = 1;    
-            else
-                destPtr[j+i*wid] = 0;
-        }
-     }
-    
+
+    jbyte* framePtr = env->GetByteArrayElements(src, &b);
+    jbyte* destPtr = env->GetByteArrayElements(dst, &b);
 #if 0
+    LabelCentralArea((unsigned char *)framePtr, picWid, picHei, labelScale);
+    LabelPalmArea((unsigned char *)destPtr);
+
     for(int i = 0; i < hei; i++) {
     	for ( int j = 0; j < wid; j++) {
             if ( destPtr[j+i*wid] == 1){
@@ -114,13 +111,21 @@ JNIEXPORT void JNICALL JNIDEFINE(nativeLabelPalm)(JNIEnv* env, jclass clz, jbyte
                 destPtr[j+i*wid] = 0;            
         }	
     }
+#else
+    for(int i = 0; i < hei; i++) {
+        for ( int j = 0; j < wid; j++) {
+            if ( i >= lty && i <= rby &&
+                    j >= ltx && j <= rbx)
+                destPtr[j+i*wid] = 1;    
+            else
+                destPtr[j+i*wid] = 0;
+        }
+    }
 #endif
+   env->ReleaseByteArrayElements(src, framePtr, 0);   
+   env->ReleaseByteArrayElements(dst, destPtr, 0);   
 
    AndroidBitmap_unlockPixels(env, bmp);
-release:    
-	env->ReleaseByteArrayElements(src, framePtr, 0);   
-	env->ReleaseByteArrayElements(dst, destPtr, 0);   
-
 }
 
 JNIEXPORT int JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jbyteArray map, jbyteArray frame, jobject bmp) {
