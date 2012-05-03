@@ -86,14 +86,22 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
             }
         }
     }
-    
+   
+    if ( top < 0) {
+        for(std::map<int,int>::iterator i = labelNumber.begin(); i != labelNumber.end(); i++) {
+            labels.push_back( i->first); 
+        }
+        return;
+    }
+
     for(std::map<int,int>::iterator i = labelNumber.begin(); i != labelNumber.end(); i++) {
         sortedLabel[ i->second ] = i->first;
     }
     
     labelNumber.clear();
     for(std::map<int,int>::reverse_iterator i = sortedLabel.rbegin(); i != sortedLabel.rend(); i++) {
-        if ( labels.size() >= (unsigned int)top)
+        
+        if ( labels.size() >= (unsigned int)top )
             break;
 
         labels.push_back( i->second );
@@ -216,7 +224,7 @@ int ClassifyLines( std::vector<int> &labels ) {
 
     if ( labels.size() <= (unsigned int)K)
         return -1;
-    
+   
     // change to 2d array of label result.
     std::map<int,int> labelmap;
     std::vector< std::vector< std::pair<int,int> > > targetLines;
@@ -304,6 +312,7 @@ int MarkLines(unsigned char *gray_frame) {
     int maxValue = 160;
     int minValue = 96;
     int maxNumber = 8;
+    //int splitValue = 5;
    
     std::vector< std::pair<int,int> > currentMargin; 
     std::pair<int,int> pos;
@@ -339,7 +348,7 @@ int MarkLines(unsigned char *gray_frame) {
     int leftOrRight = -1;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {            
-            if ( gray_frame[x+y*wid]  >= maxValue ) {     
+            if ( gray_frame[x+y*wid]  >= minValue ) {     
                 int mapy = x;
                 int mapx = hei - y;           
                 if ( mapx > (outlinety + outlinedy)/2 ) {                    
@@ -393,9 +402,24 @@ int MarkLines(unsigned char *gray_frame) {
     // remain top longest lines
     std::vector<int> labels;
     BwLabel(labelImage, labels, maxNumber); 
- 
+   
+#if 0 
+    for (int y = 0; y < hei; y++) {
+        for (int x = 0; x < wid; x++) {
+            if ( labelImage.data[y][x] > 0) {
+                labelImage.data[y][x] = -1;
+                if ((y%splitValue == 0) || (x%splitValue == 0) ) {
+                    labelImage.data[y][x] = 0;
+                } 
+            }
+        }
+    }
+    labels.clear();
+    BwLabel(labelImage, labels, -1); 
+#endif
+
     int ret = ClassifyLines(labels);
-    
+
     if ( ret == 0) {
         for (int y = 0; y < hei; y++) {
             for (int x = 0; x < wid; x++) {
@@ -405,5 +429,5 @@ int MarkLines(unsigned char *gray_frame) {
         return -1; 
     }
 
-    return ret;
+    return 0;
 }
