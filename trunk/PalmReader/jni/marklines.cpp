@@ -137,9 +137,9 @@ std::pair<float,float> getLinesParameter(const std::vector< std::vector< std::pa
         } 
     }
 
-    std::pair<int,int> ret;
-    ret.first = ( num * sum_xy - sum_x * sum_y) / ( num * sum_xx - sum_x * sum_x) ;
-    ret.second = sum_y/num - ret.first * sum_x / num;
+    std::pair<float, float> ret;
+    ret.first = ( num * sum_xy - sum_x * sum_y)  / ( num * sum_xx - sum_x * sum_x) ;
+    ret.second = sum_y/num - ret.first * sum_x  / num;
 
     return ret;
 }
@@ -150,7 +150,7 @@ std::pair<float,float> getLinesParameter(const std::vector< std::vector< std::pa
  *******************************************************/
 
 float linearDistance(const std::vector< std::pair<int,int> > &line, float a, float b) {
-    float sum = 0;
+    float sum = 0.0;
     for(unsigned int i = 0; i < line.size(); i++) {
         float dist = abs( line[i].second - a * line[i].first - b);
         dist = dist / sqrt( a*a  + 1);
@@ -173,8 +173,8 @@ int kmean(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
         float minDist = -1;
         int minLabel = -1;
         for (unsigned int n = 0; n < linesParameter.size(); n++) {
-            float dist = linearDistance( targetLines[i], linesParameter[n].first, linesParameter[n].first);
-            if ( dist < minDist || minDist < 0) {
+            float dist = linearDistance( targetLines[i], linesParameter[n].first, linesParameter[n].second);
+            if ( (dist < minDist) || (minDist < 0) ){
                 minDist = dist;
                 minLabel = n;
             }
@@ -187,15 +187,16 @@ int kmean(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
     for(unsigned int i = 0; i < linesParameter.size(); i++) {
         if (linesLabel[i].size() != newLabel[i].size() ){
             isSame = false;
-            break;
+            goto done;
         }
         for(unsigned int n = 0; n < newLabel.size(); n++ ) {
             if( linesLabel[i][n] != newLabel[i][n] ) {
                 isSame = false;
-                break;
+                goto done;
             }                
         }
     }
+done:    
     if ( isSame)
         return 1;
 
@@ -228,6 +229,8 @@ int ClassifyLines( std::vector<int> &labels ) {
     int hei = labelImage.height;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
+            if (  labelImage.data[y][x] == 0)
+                continue;
             int newLabel = labelmap[ labelImage.data[y][x] ];
             std::pair<int,int> point;
             point.first = x;
@@ -236,7 +239,7 @@ int ClassifyLines( std::vector<int> &labels ) {
         }   
     } 
    
-    // building pass classify.
+    // building first pass classify.
     std::vector< std::vector<int> > linesLabel;
     std::vector< std::pair<float, float> > linesParameter;  
     for(int i = 0; i < K ; i++) {  
@@ -256,22 +259,34 @@ int ClassifyLines( std::vector<int> &labels ) {
         lp = getLinesParameter(targetLines, group);
         linesParameter[i] = lp;
     }
-    
+  
+
+#if 0
+    for(int x = 0; x < labelImage.width; x++){ 
+        int y = linesParameter[0].first * x + linesParameter[0].second;
+        if ( y >=0 && y < labelImage.height) {
+            labelImage.data[y][x] = 255;
+        }
+    }
+    return 0;
+#endif    
+
     for(int i = 0; i < 10; i++) { 
         if ( kmean(targetLines, linesLabel,  linesParameter) > 0) {
             break;
         }
-
-        LOGD("-------------------------------------");
-        for(unsigned int n = 0; n < linesLabel.size(); n++) {
-            LOGD(">>>>>>>>>>>>>>>>>>>>>>>%d", n);
-            for(unsigned int j = 0; j < linesLabel[n].size(); j++)
-                LOGD("%d,", linesLabel[n][j] );
-        }
     }
 
     // OK, we got 3 lines now.
-
+    for(unsigned int i = 0; i < linesLabel.size(); i++) {
+        for ( unsigned int n = 0; n < linesLabel[i].size(); n++) {
+            for( unsigned int j = 0; j < targetLines[ linesLabel[i][n]].size(); j++) {
+                int y = targetLines[ linesLabel[i][n]][j].second;
+                int x = targetLines[ linesLabel[i][n]][j].first;
+                labelImage.data[y][x] = i * 120 + 1;
+            }
+        }
+    }
 
     return 0;
 }
@@ -287,7 +302,8 @@ int MarkLines(unsigned char *gray_frame) {
     int outlinedy = 0;
 
     int maxValue = 160;
-    int minValue = 96;
+    int minValue = 64;
+    int maxNumber = 8;
    
     std::vector< std::pair<int,int> > currentMargin; 
     std::pair<int,int> pos;
@@ -376,7 +392,7 @@ int MarkLines(unsigned char *gray_frame) {
 
     // remain top longest lines
     std::vector<int> labels;
-    BwLabel(labelImage, labels, 12); 
+    BwLabel(labelImage, labels, maxNumber); 
  
     int ret = ClassifyLines(labels);
     
