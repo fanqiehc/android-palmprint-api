@@ -18,7 +18,6 @@ void PrepareMarkLines(int wid, int hei) {
     labelImage.resize(wid, hei);
 }
 
-#if 0
 /*
    wee apply a second degree curve to fitting the palmprint lines.
    y = a + b * x + c * x^2;
@@ -34,8 +33,6 @@ float finddet(float a1,float a2, float a3,float b1, float b2,float b3, float c1,
 {
     return ((a1*b2*c3)-(a1*b3*c2)-(a2*b1*c3)+(a3*b1*c2)+(a2*b3*c1)-(a3*b2*c1)); /*expansion of a 3x3 determinant*/
 }
-#endif
-
 
 static int findRoot(std::vector<int> &links, int x) {
     if ( links[x] != x)
@@ -70,7 +67,7 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
                 currentMaxLabel ++;
                 continue;
             }
-           
+          
             for(int yy = y - 1; yy <= y; yy++) 
             for(int xx = x - 1; xx <= x + 1; xx++){
                 if ( (bwimg.data[yy][xx] > 0) && (bwimg.data[y][x] != bwimg.data[yy][xx]) ) {
@@ -137,13 +134,18 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
 }
 
 /*******************************************************
+ LINES VERSION:
  y = a0 + a1 * x;
  a1 = (n*sum(x*y) - sum(x) * sum (y)) / (n*sum(x^2) - sum(x)^2)
  a0 = sum(y)/n - a1 * sum(x)/n
 
+ PARABOLA VERSION:
+ y = a + b*x + b*X^2;
+ 
  *******************************************************/
-std::pair<float,float> getLinesParameter(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
+GroupParamter getLinesParameter(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
                                          std::vector<int> &group) {
+#if 1
     float sum_x = 0.0;
     float sum_y = 0.0;
     float sum_xy = 0.0;
@@ -164,11 +166,36 @@ std::pair<float,float> getLinesParameter(const std::vector< std::vector< std::pa
         } 
     }
 
-    std::pair<float, float> ret;
-    ret.first = ( num * sum_xy - sum_x * sum_y)  / ( num * sum_xx - sum_x * sum_x) ;
-    ret.second = sum_y/num - ret.first * sum_x  / num;
-
+    GroupParamter ret;
+    ret.a = ( num * sum_xy - sum_x * sum_y)  / ( num * sum_xx - sum_x * sum_x) ;
+    ret.b = sum_y/num - ret.a * sum_x  / num;
     return ret;
+#else
+    float x = 0.0;
+    float y = 0.0;
+    float x2 = 0.0;
+    float x3 = 0.0;
+    float x4 = 0.0;
+    float xy = 0.0;
+    float x2y = 0.0;  
+    int num = 0;
+
+    for(unsigned int n = 0; n < group.size(); n++) {
+        for (unsigned int i = 0; i < targetLines[ group[n]].size() ; i++) {
+            int x = targetLines[ group[n]][i].first;
+            int y = targetLines[ group[n]][i].second;
+            num ++;
+            x += x;
+            y += y;
+            xy += x * y;
+            x2 += x * x;
+            y2 += y * y;             
+            x3 += x * x * x;
+            x2y += x * x * y;
+            x4 += x * x * x * x;
+        } 
+    }
+#endif
 }
 
 /*******************************************************
@@ -188,7 +215,7 @@ float linearDistance(const std::vector< std::pair<int,int> > &line, float a, flo
 }
 
 int kmean(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
-             std::vector< std::vector<int> > &linesLabel, std::vector< std::pair<float, float> > &linesParameter ) {
+             std::vector< std::vector<int> > &linesLabel, std::vector<GroupParamter > &linesParameter ) {
 
     std::vector< std::vector<int> > newLabel;    
     for(unsigned int i = 0; i <  linesParameter.size(); i++) {          
@@ -200,7 +227,7 @@ int kmean(const std::vector< std::vector< std::pair<int,int> > > &targetLines,
         float minDist = -1;
         int minLabel = -1;
         for (unsigned int n = 0; n < linesParameter.size(); n++) {
-            float dist = linearDistance( targetLines[i], linesParameter[n].first, linesParameter[n].second);
+            float dist = linearDistance( targetLines[i], linesParameter[n].a, linesParameter[n].b);
             if ( (dist < minDist) || (minDist < 0) ){
                 minDist = dist;
                 minLabel = n;
@@ -230,7 +257,7 @@ done:
     // update linesParameter 
     linesLabel = newLabel;
     for(unsigned int i = 0; i < linesParameter.size(); i++) {
-        std::pair<float,float> lp;
+        GroupParamter lp;
         lp = getLinesParameter(targetLines, linesLabel[i]);
         linesParameter[i] = lp;
     }
@@ -268,18 +295,19 @@ int GroupLines( std::vector<int> &labels ) {
    
     // building first pass classify.
     std::vector< std::vector<int> > linesLabel;
-    std::vector< std::pair<float, float> > linesParameter;  
+    std::vector< GroupParamter > linesParameter;  
     for(int i = 0; i < K ; i++) {  
-        std::pair<float, float> lp;  
+        GroupParamter lp;  
         std::vector<int> emptyLabel;    
-        lp.first = 0.0;
-        lp.second = 0.0; 
+        lp.a = 0.0;
+        lp.b = 0.0; 
+        lp.c = 0.0;
         linesParameter.push_back(lp);
         linesLabel.push_back(emptyLabel);
     }    
     std::vector<int> group;
     group.push_back( 0 );
-    std::pair<float,float> lp = getLinesParameter(targetLines, group);
+    GroupParamter lp = getLinesParameter(targetLines, group);
     linesParameter[0] = lp;
     for(int i = 1; i < K; i++) {
         group[0] = i;
@@ -365,7 +393,8 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight, int d) {
             break;
         }
     }
-#if 0
+
+#if 1
     int lifeLeftx = 0; 
     int lifeLefty = 0;
     int lifeNumber = 0;
@@ -418,11 +447,13 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight, int d) {
     }
 
 done:
-       
-    if ( markedLifeNumber * 10 / lifeNumber < 8) {
+    
+    /*   
+    if ( markedLifeNumber * 10 / lifeNumber < 7) {
         heart = life;
         life = -1 * life; 
     }
+    */
 #endif
 
     for (int y = 0; y < hei; y++) {
@@ -466,8 +497,8 @@ int MarkLines(unsigned char *gray_frame) {
 
     int maxValue = 160;
     int minValue = 96;
-    int maxNumber = 8;
-    //int splitValue = 5;
+    int maxNumber = 6;
+    //int splitValue = 3;
    
     std::vector< std::pair<int,int> > currentMargin; 
     std::pair<int,int> pos;
