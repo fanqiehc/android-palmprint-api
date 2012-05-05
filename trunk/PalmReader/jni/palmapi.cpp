@@ -190,6 +190,8 @@ JNIEXPORT int JNICALL JNIDEFINE(nativeReadingPalm)(JNIEnv* env, jclass clz, jbyt
                     *rgba = 0xFF00FF00;
                 } else if (g==3) {
                     *rgba = 0xFF0000FF;
+                } else if (g==4) {
+                    *rgba = 0xFFFFFFFF;
                 }
             } else {
                 if ( g > 0) {
