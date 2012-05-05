@@ -103,13 +103,6 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
         }
     }
    
-    if ( top < 0) {
-        for(std::map<int,int>::iterator i = labelNumber.begin(); i != labelNumber.end(); i++) {
-            labels.push_back( i->first); 
-        }
-        return;
-    }
-
     for(std::map<int,int>::iterator i = labelNumber.begin(); i != labelNumber.end(); i++) {
         sortedLabel[ i->second ] = i->first;
     }
@@ -131,6 +124,54 @@ static void BwLabel(IntImage &bwimg, std::vector<int> &labels, int top) {
             }
         }
     } 
+}
+
+static void CombinLines(std::vector<int> &labels, int dist) {
+    // get the outline of palm area
+    int wid = labelImage.width;
+    int hei = labelImage.height; 
+    int combinedValue = labels.back();
+
+    for (int y = dist; y < hei-dist; y+=dist) {
+        for (int x = dist; x < wid-dist; x+=dist) {
+            int cv = 0;   
+            int v = 0;
+            for(int xx = x - dist; xx < x+dist; xx++) {
+                for (int yy = y - dist; yy < y+dist; yy++) {
+                    if ( labelImage.data[yy][xx] > 0 && labelImage.data[yy][xx] != combinedValue ) {
+                        v = labelImage.data[yy][xx];
+                    } else if ( labelImage.data[yy][xx] == combinedValue ) {
+                        cv = combinedValue;
+                    }
+                    if ( v != 0 && cv != 0) {
+                        combinedValue = v;
+                        goto done;
+                    }
+                }
+            }
+        }
+    }
+
+done:
+    if ( combinedValue == labels.back() ) {
+        for (int y = 0; y < hei; y++) {
+            for(int x = 0; x < wid; x++) {
+                if ( labelImage.data[y][x] == labels.back() ) {
+                    labelImage.data[y][x] = 0; 
+                }
+            }
+        }
+        labels.pop_back();                      //just ignor this line        
+    } else {
+        for (int y = 0; y < hei; y++) {
+            for (int x = 0; x < wid; x++) {
+                if ( labelImage.data[y][x] == labels.back() )
+                    labelImage.data[y][x] = combinedValue;
+            }
+        }
+        labels.pop_back();                      //combin this line 
+    }
+
 }
 
 /*******************************************************
@@ -349,7 +390,7 @@ int GroupLines( std::vector<int> &labels ) {
     return 0;
 }
 
-static int ClassifyLines(std::vector<int> &labels, int leftOrRight, int d) {
+static int ClassifyLines(std::vector<int> &labels, int leftOrRight) {
     int wid = labelImage.width;
     int hei = labelImage.height;
 
@@ -394,68 +435,6 @@ static int ClassifyLines(std::vector<int> &labels, int leftOrRight, int d) {
         }
     }
 
-#if 1
-    int lifeLeftx = 0; 
-    int lifeLefty = 0;
-    int lifeNumber = 0;
-    for (int y = 0; y < hei; y++) {
-        for (int x = 0; x < wid; x++) {
-            if ( labelImage.data[y][x] == life ) {
-                lifeNumber ++;
-                if ( y > lifeLefty){
-                    lifeLeftx = x;
-                    lifeLefty = y;                    
-                }
-            } 
-        }
-    }
-
-    std::vector< std::pair<int,int> > currentMargin;
-    std::vector< std::pair<int,int> > newMargin;
-    std::pair<int,int> pos;
-    
-    int markedLifeNumber = 0;
-    labelImage.data[lifeRighty][lifeRightx] = -1 * life;
-    pos.first = lifeRightx;
-    pos.second = lifeRighty;
-    currentMargin.push_back(pos);
-
-    while( currentMargin.size() > 0) {
-        newMargin.clear();
-       
-        for(int i = 0; i < (int)currentMargin.size(); i++) {
-            int x = currentMargin[i].first;
-            int y = currentMargin[i].second;
-
-            for(int yy = y - d; yy <= y + d; yy++){
-                for( int xx = x - d; xx <= x + d; xx++){
-                    if ( labelImage.data[yy][xx] == life && xx > lifeLeftx) {
-                        labelImage.data[yy][xx] = -1 * life;
-                        pos.first = xx;
-                        pos.second = yy;
-                        newMargin.push_back(pos);
-                        markedLifeNumber ++;
-                    } else {
-                        if ( labelImage.data[yy][xx] == life && xx <= lifeLeftx) {
-                            goto done;
-                        }
-                    }
-                }
-            }
-        }
-        currentMargin = newMargin;
-    }
-
-done:
-    
-    /*   
-    if ( markedLifeNumber * 10 / lifeNumber < 7) {
-        heart = life;
-        life = -1 * life; 
-    }
-    */
-#endif
-
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
             if ( labelImage.data[y][x] == life)
@@ -497,7 +476,8 @@ int MarkLines(unsigned char *gray_frame) {
 
     int maxValue = 160;
     int minValue = 96;
-    int maxNumber = 6;
+    int maxNumber = 16;
+    int minNumber = 6;
     //int splitValue = 3;
    
     std::vector< std::pair<int,int> > currentMargin; 
@@ -589,24 +569,39 @@ int MarkLines(unsigned char *gray_frame) {
     std::vector<int> labels;
     BwLabel(labelImage, labels, maxNumber); 
    
-#if 0 
+#if 1 
+    // split into small lines
+    int leftx = 0;
+    int lefty = 0;
     for (int y = 0; y < hei; y++) {
         for (int x = 0; x < wid; x++) {
             if ( labelImage.data[y][x] > 0) {
                 labelImage.data[y][x] = -1;
-                if ((y%splitValue == 0) || (x%splitValue == 0) ) {
-                    labelImage.data[y][x] = 0;
-                } 
+                if ( y > lefty) {
+                    leftx = x;
+                    lefty = y;
+                }
             }
         }
     }
+    for( int y = lefty-5; y <= lefty; y++) {
+        for ( int x = leftx-5; x <= leftx+5; x++) {
+            labelImage.data[y][x] = 0;
+        }
+    } 
     labels.clear();
-    BwLabel(labelImage, labels, -1); 
+    BwLabel(labelImage, labels, maxNumber); 
 #endif
+
+    // try combing the candidated lines
+    while ( labels.size() > (unsigned int)minNumber) {
+        CombinLines(labels, 4);
+    }
+    
     GroupLines(labels);
 
-    int ret = ClassifyLines(labels, leftOrRight, 5);
-
+    int ret = ClassifyLines(labels, leftOrRight);
+    
     if ( ret > 0) {
         for (int y = 0; y < hei; y++) {
             for (int x = 0; x < wid; x++) {
