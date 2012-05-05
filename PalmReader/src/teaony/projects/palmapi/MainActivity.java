@@ -11,6 +11,8 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
 import android.app.ProgressDialog;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
@@ -21,6 +23,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.MotionEvent;
 import android.view.Window;
@@ -29,6 +32,7 @@ import android.view.SurfaceView;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
+import android.webkit.WebView;
 
 public class MainActivity extends Activity 
     implements View.OnTouchListener, CameraView.CameraReadyCallback, OverlayView.UpdateDoneCallback{
@@ -39,6 +43,7 @@ public class MainActivity extends Activity
     private CameraView cameraView_;
     private OverlayView overlayView_;
     private ProgressDialog processDialog = null;
+    private AlertDialog helperDialog = null;
     private Button btnNext;
     private TextView tvMsg;
 
@@ -64,6 +69,10 @@ public class MainActivity extends Activity
 
         setContentView(R.layout.main);
 
+    
+        btnNext = (Button)findViewById(R.id.btn_next);
+        tvMsg = (TextView)findViewById(R.id.tv_message);
+
         SurfaceView cameraSurface = (SurfaceView)findViewById(R.id.surface_camera);
         cameraView_ = new CameraView(cameraSurface, 640, 480, 640, 480);        
         cameraView_.setCameraReadyCallback(this);
@@ -71,9 +80,24 @@ public class MainActivity extends Activity
         overlayView_ = (OverlayView)findViewById(R.id.surface_overlay);
         overlayView_.setOnTouchListener(this);
         overlayView_.setUpdateDoneCallback(this);
-    
-        btnNext = (Button)findViewById(R.id.btn_next);
-        tvMsg = (TextView)findViewById(R.id.tv_message);
+        
+        new Handler(Looper.getMainLooper()).post(new Runnable(){
+                public void run() { 
+                    LayoutInflater inflater = LayoutInflater.from(MainActivity.this);
+                    View helperView = inflater.inflate(R.layout.helper, null);
+                    
+                    WebView webview = (WebView)helperView.findViewById(R.id.webview);
+                    webview.getSettings().setJavaScriptEnabled(true);
+                    webview.setVerticalScrollBarEnabled(false);
+                    webview.addJavascriptInterface(MainActivity.this, "Helper");
+                    webview.loadUrl("file:///android_asset/helper.html");
+
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                    builder.setView(helperView);
+                    helperDialog = builder.create();
+                    helperDialog.show();
+                }   
+           });     
     }
     
     @Override
@@ -114,6 +138,11 @@ public class MainActivity extends Activity
     public void onPause(){    
         super.onPause();
     }  
+    
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+    }
 
     @Override
     public boolean onTouch(View v, MotionEvent evt) {
@@ -139,6 +168,16 @@ public class MainActivity extends Activity
 
         return false;
     } 
+
+    public void hideHelper() {
+        if (helperDialog != null) {
+            new Handler(Looper.getMainLooper()).post(new Runnable(){
+                public void run() { 
+                    helperDialog.hide();
+                    } 
+                });                   
+        }
+    }
 
     private void waitCompleteLastLabeling() {
         if ( labelThread_ == null)
